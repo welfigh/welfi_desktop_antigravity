@@ -13,7 +13,7 @@ RUN npm install
 COPY . .
 
 # Build the application
-RUN npm run build
+RUN chmod +x node_modules/.bin/vite && npm run build
 
 # Stage 2: Serve with Nginx
 FROM nginx:alpine
