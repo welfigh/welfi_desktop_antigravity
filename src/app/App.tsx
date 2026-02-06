@@ -13,12 +13,19 @@ import { TotalBalanceChart } from "./components/TotalBalanceChart";
 import { AllInvestmentsPage } from "./components/AllInvestmentsPage";
 import { MovementsPage } from "./components/MovementsPage";
 import { SettingsPage } from "./components/SettingsPage";
+import { LoginPage } from "./components/LoginPage";
 import img716 from "../assets/72384e84861ccea0025a5cb04af72b6dbb5d53f9.png";
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showWelfiPesosFlow, setShowWelfiPesosFlow] = useState(false);
   const [currentPage, setCurrentPage] = useState("home");
   const [currency, setCurrency] = useState<"USD" | "ARS">("USD");
+
+  // If not authenticated, show login page
+  if (!isAuthenticated) {
+    return <LoginPage onLogin={() => setIsAuthenticated(true)} />;
+  }
 
   // Exchange rate: 1 USD = 1000 ARS (aproximado)
   const EXCHANGE_RATE = 1000;
@@ -292,7 +299,7 @@ export default function App() {
 
           {/* CONFIGURACIÓN */}
           {currentPage === "settings" && (
-            <SettingsPage />
+            <SettingsPage onLogout={() => setIsAuthenticated(false)} />
           )}
 
           {/* TODAS MIS INVERSIONES */}

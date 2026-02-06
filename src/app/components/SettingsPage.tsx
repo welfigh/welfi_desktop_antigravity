@@ -1,6 +1,10 @@
 import { User, Shield, Bell, Globe, ChevronRight } from "lucide-react";
 
-export function SettingsPage() {
+interface SettingsPageProps {
+    onLogout: () => void;
+}
+
+export function SettingsPage({ onLogout }: SettingsPageProps) {
     const sections = [
         {
             title: "Cuenta",
@@ -51,7 +55,10 @@ export function SettingsPage() {
                 <section className="space-y-4">
                     <h2 className="text-xl font-bold text-red-600">Zona de peligro</h2>
                     <div className="bg-white rounded-2xl border border-red-100 shadow-sm overflow-hidden">
-                        <button className="w-full flex items-center gap-4 p-4 hover:bg-red-50 transition-colors text-left group">
+                        <button
+                            onClick={onLogout}
+                            className="w-full flex items-center gap-4 p-4 hover:bg-red-50 transition-colors text-left group"
+                        >
                             <div className="flex-1">
                                 <div className="font-semibold text-red-600">Cerrar sesión</div>
                                 <div className="text-sm text-gray-500">Cierra tu sesión en este dispositivo</div>
