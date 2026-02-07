@@ -14,13 +14,79 @@ import { AllInvestmentsPage } from "./components/AllInvestmentsPage";
 import { MovementsPage } from "./components/MovementsPage";
 import { SettingsPage } from "./components/SettingsPage";
 import { LoginPage } from "./components/LoginPage";
+import { InvestmentSelectionModal } from "./components/InvestmentSelectionModal";
+import { AddToInvestmentFlow } from "./components/AddToInvestmentFlow";
+import { CreateWelfiPesosFlow } from "./components/CreateWelfiPesosFlow";
 import img716 from "../assets/72384e84861ccea0025a5cb04af72b6dbb5d53f9.png";
+
+// Interface for investments (duplicated for now to keep home self-contained or could export from AllInvestmentsPage)
+interface Investment {
+  id: string;
+  emoji: string;
+  name: string;
+  amount: string;
+  currency: string;
+  returnRate: string;
+  isPositive: boolean;
+  progress?: number;
+  goalAmount?: string;
+  monthlyInvestment?: string;
+  tna?: string;
+  packsCount?: number;
+}
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showWelfiPesosFlow, setShowWelfiPesosFlow] = useState(false);
-  const [currentPage, setCurrentPage] = useState("home");
-  const [currency, setCurrency] = useState<"USD" | "ARS">("USD");
+  const [currentPage, setCurrentPage] = useState<"home" | "stats" | "investments" | "movements" | "settings">("home");
+  const [currency, setCurrency] = useState<"ARS" | "USD">("ARS");
+
+  // State for Add Money Flow from Home
+  const [showAddFlow, setShowAddFlow] = useState(false);
+  const [showSelectionModal, setShowSelectionModal] = useState(false);
+  const [selectedInvestmentGroup, setSelectedInvestmentGroup] = useState<Investment[]>([]);
+  const [selectedGroupTitle, setSelectedGroupTitle] = useState("");
+  const [targetInvestment, setTargetInvestment] = useState<Investment | null>(null);
+  const [showCreateWelfiPesosFlow, setShowCreateWelfiPesosFlow] = useState(false);
+
+  // DATA DEFINITIONS (Mirrored from AllInvestmentsPage for Home Logic)
+  const welfiPesosInvestments: Investment[] = [
+    { id: "wp1", emoji: "💰", name: "Welfi Pesos Principal", amount: "2.004,00", currency: "ARS", returnRate: "0.9%", isPositive: true, monthlyInvestment: "500,00", tna: "38.0%" },
+    { id: "wp2", emoji: "💸", name: "Gastos del mes", amount: "450,00", currency: "ARS", returnRate: "0.8%", isPositive: true, tna: "38.0%" },
+  ];
+
+  const investmentStrategies: Investment[] = [
+    { id: "obj1", emoji: "💻", name: "Cambio de compu", amount: "1.354,00", currency: "USD", returnRate: "0.4%", isPositive: true, progress: 65, goalAmount: "2.000,00", monthlyInvestment: "150,00" },
+    { id: "obj2", emoji: "🚗", name: "Auto 2026", amount: "1.354,00", currency: "USD", returnRate: "0.4%", isPositive: false, progress: 35, goalAmount: "3.850,00", monthlyInvestment: "200,00" },
+    { id: "obj3", emoji: "🏖️", name: "Vacaciones Europa", amount: "650,00", currency: "USD", returnRate: "1.2%", isPositive: true, progress: 80, goalAmount: "810,00", monthlyInvestment: "80,00" },
+  ];
+
+  const thematicPacks: Investment[] = [
+    { id: "pack1", emoji: "💼", name: "Empresas de Valor", amount: "263,25", currency: "USD", returnRate: "0.4%", isPositive: true, packsCount: 5 },
+    { id: "pack2", emoji: "🤖", name: "Inteligencia Artificial", amount: "283,27", currency: "USD", returnRate: "0.4%", isPositive: true, packsCount: 3 },
+  ];
+
+  const emergencyFunds: Investment[] = [
+    { id: "fund1", emoji: "🛡️", name: "Fondo de emergencia", amount: "1.200,00", currency: "USD", returnRate: "0.9%", isPositive: true, monthlyInvestment: "100,00" },
+  ];
+
+  const retirementFunds: Investment[] = []; // Empty for demo of "Start now" state (or use [] if user wants empty) - Wait, mock had empty for "Welfi Dolares" and "Retirement" in App.tsx originally.
+
+  // Helper to handle "Add Money" click
+  const handleAddMoneyClick = (investments: Investment[], title: string) => {
+    if (investments.length === 0) {
+      // Should catch the "Create" case instead, but safe guard
+      return;
+    }
+    if (investments.length === 1) {
+      setTargetInvestment(investments[0]);
+      setShowAddFlow(true);
+    } else {
+      setSelectedInvestmentGroup(investments);
+      setSelectedGroupTitle(title);
+      setShowSelectionModal(true);
+    }
+  };
 
   // If not authenticated, show login page
   if (!isAuthenticated) {
@@ -49,6 +115,11 @@ export default function App() {
   const totalBalance = currency === "USD"
     ? totalBalanceUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : (totalBalanceUSD * EXCHANGE_RATE).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const availableBalanceForModal = {
+    ars: "13.254,32",
+    usd: "2.543,21"
+  };
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-[#fafafa] to-[#f5f5f7]">
@@ -184,16 +255,18 @@ export default function App() {
                 </div>
 
                 {/* Investment cards grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-6">
                   {/* Corto plazo cards */}
                   <InvestmentCard
                     title="Welfi Pesos"
                     amount="$ 2.004,00"
                     currency="ARS"
                     returnRate="0.9%"
-                    objectivesCount={1}
+                    objectivesCount={welfiPesosInvestments.length}
                     objectivesLabel="inversión"
                     onViewAll={() => setCurrentPage("investments")}
+                    onAddMoney={() => handleAddMoneyClick(welfiPesosInvestments, "Welfi Pesos")}
+                    onCreateNew={() => setShowCreateWelfiPesosFlow(true)}
                   />
                   <InvestmentCard
                     title="Welfi Dólares"
@@ -210,27 +283,30 @@ export default function App() {
                     amount={currency === "USD" ? "$ 2.004,00" : `$ ${formatAmount(2004, false)}`}
                     currency={currency}
                     returnRate="0.9%"
-                    objectivesCount={4}
+                    objectivesCount={investmentStrategies.length}
                     objectivesLabel="objetivos"
                     onViewAll={() => setCurrentPage("investments")}
+                    onAddMoney={() => handleAddMoneyClick(investmentStrategies, "Objetivo")}
                   />
                   <InvestmentCard
                     title="Packs temáticos de acciones"
                     amount={currency === "USD" ? "$ 534,00" : `$ ${formatAmount(534, false)}`}
                     currency={currency}
                     returnRate="2.3%"
-                    objectivesCount={2}
+                    objectivesCount={thematicPacks.length}
                     objectivesLabel="packs"
                     onViewAll={() => setCurrentPage("investments")}
+                    onAddMoney={() => handleAddMoneyClick(thematicPacks, "Pack")}
                   />
                   <InvestmentCard
                     title="Fondo de Emergencia"
                     amount={currency === "USD" ? "$ 1.200,00" : `$ ${formatAmount(1200, false)}`}
                     currency={currency}
                     returnRate="1.5%"
-                    objectivesCount={1}
+                    objectivesCount={emergencyFunds.length}
                     objectivesLabel="fondo"
                     onViewAll={() => setCurrentPage("investments")}
+                    onAddMoney={() => handleAddMoneyClick(emergencyFunds, "Fondo de Emergencia")}
                   />
                   <InvestmentCard
                     title="Fondo de retiro"
@@ -269,6 +345,47 @@ export default function App() {
             </div>
           )}
 
+          {/* INVESTMENTS PAGE */}
+          {currentPage === "investments" && <AllInvestmentsPage />}
+
+          {/* MOVEMENTS PAGE */}
+          {currentPage === "movements" && <MovementsPage />}
+
+          {/* SETTINGS PAGE */}
+          {currentPage === "settings" && <SettingsPage onLogout={() => setIsAuthenticated(false)} />}
+
+          {/* MODALS render */}
+          {showAddFlow && targetInvestment && (
+            <AddToInvestmentFlow
+              investment={targetInvestment}
+              availableBalance={availableBalanceForModal}
+              onClose={() => setShowAddFlow(false)}
+            />
+          )}
+
+          {showSelectionModal && (
+            <InvestmentSelectionModal
+              onClose={() => setShowSelectionModal(false)}
+              title={`Sumar dinero a ${selectedGroupTitle}`}
+              investments={selectedInvestmentGroup}
+              onSelect={(investmentId) => {
+                const investment = selectedInvestmentGroup.find(inv => inv.id === investmentId);
+                if (investment) {
+                  setTargetInvestment(investment);
+                  setShowSelectionModal(false);
+                  setShowAddFlow(true);
+                }
+              }}
+            />
+          )}
+
+          {showCreateWelfiPesosFlow && (
+            <CreateWelfiPesosFlow
+              availableBalance={availableBalanceForModal}
+              onClose={() => setShowCreateWelfiPesosFlow(false)}
+            />
+          )}
+
           {/* ESTADÍSTICAS */}
           {currentPage === "stats" && (
             <div className="space-y-8">
@@ -276,47 +393,11 @@ export default function App() {
                 <div className="w-1 h-8 bg-gradient-to-b from-[#3246ff] to-[#4856ff] rounded-full" />
                 <h1 className="text-gray-900 text-3xl font-black">Estadísticas</h1>
               </div>
-
-              {/* Quick Stats */}
-              <section>
-                <QuickStats />
-              </section>
-
-              {/* Charts section */}
-              <section>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <PerformanceChart />
-                  <PortfolioDistribution />
-                </div>
-              </section>
+              <p className="text-gray-600">Próximamente...</p>
             </div>
-          )}
-
-          {/* MOVIMIENTOS */}
-          {currentPage === "movements" && (
-            <MovementsPage />
-          )}
-
-          {/* CONFIGURACIÓN */}
-          {currentPage === "settings" && (
-            <SettingsPage onLogout={() => setIsAuthenticated(false)} />
-          )}
-
-          {/* TODAS MIS INVERSIONES */}
-          {currentPage === "investments" && (
-            <AllInvestmentsPage />
           )}
         </main>
       </div>
-
-      {/* Welfi Pesos Investment Flow Modal */}
-      {showWelfiPesosFlow && (
-        <WelfiPesosFlow
-          availableBalanceARS="1,000.00"
-          availableBalanceUSD="4,560.00"
-          onClose={() => setShowWelfiPesosFlow(false)}
-        />
-      )}
     </div>
   );
 }

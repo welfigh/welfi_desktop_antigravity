@@ -1,7 +1,9 @@
-import { ChevronRight, Plus } from "lucide-react";
+import { ChevronRight, Plus, Wallet, TrendingUp, Search } from "lucide-react";
 import { useState } from "react";
 import { AddToInvestmentFlow } from "./AddToInvestmentFlow";
 import { InvestmentDetailPage } from "./InvestmentDetailPage";
+import { ProductSelector } from "./ProductSelector";
+import { CreateWelfiPesosFlow } from "./CreateWelfiPesosFlow";
 
 interface Investment {
   id: string;
@@ -15,12 +17,15 @@ interface Investment {
   goalAmount?: string; // Monto objetivo
   monthlyInvestment?: string; // Inversión mensual
   tna?: string; // TNA esperada
+  packsCount?: number; // Cantidad de packs
 }
 
 export function AllInvestmentsPage() {
   const [showAddFlow, setShowAddFlow] = useState(false);
   const [selectedInvestment, setSelectedInvestment] = useState<Investment | null>(null);
   const [showDetail, setShowDetail] = useState(false);
+  const [showProductSelector, setShowProductSelector] = useState(false);
+  const [showCreateWelfiPesosFlow, setShowCreateWelfiPesosFlow] = useState(false);
 
   // Available balance from home
   const availableBalance = {
@@ -28,8 +33,8 @@ export function AllInvestmentsPage() {
     usd: "2.543,21"
   };
 
-  // Corto plazo investments
-  const shortTermInvestments: Investment[] = [
+  // Welfi Pesos investments - Multiple instances allowed
+  const welfiPesosInvestments: Investment[] = [
     {
       id: "wp1",
       emoji: "💰",
@@ -41,9 +46,19 @@ export function AllInvestmentsPage() {
       monthlyInvestment: "500,00",
       tna: "38.0%",
     },
+    {
+      id: "wp2",
+      emoji: "💸",
+      name: "Gastos del mes",
+      amount: "450,00",
+      currency: "ARS",
+      returnRate: "0.8%",
+      isPositive: true,
+      tna: "38.0%",
+    },
   ];
 
-  // Mediano y largo plazo - Estrategias de inversión
+  // Estrategias de inversión - Objetivos personales
   const investmentStrategies: Investment[] = [
     {
       id: "obj1",
@@ -83,7 +98,6 @@ export function AllInvestmentsPage() {
     },
   ];
 
-  // Packs temáticos
   const thematicPacks: Investment[] = [
     {
       id: "pack1",
@@ -93,7 +107,7 @@ export function AllInvestmentsPage() {
       currency: "USD",
       returnRate: "0.4%",
       isPositive: true,
-      monthlyInvestment: "50,00",
+      packsCount: 5,
     },
     {
       id: "pack2",
@@ -103,22 +117,26 @@ export function AllInvestmentsPage() {
       currency: "USD",
       returnRate: "0.4%",
       isPositive: true,
-      monthlyInvestment: "75,00",
+      packsCount: 3,
     },
   ];
 
-  // Fondos recomendados
-  const recommendedFunds: Investment[] = [
+  // Fondo de Emergencia
+  const emergencyFunds: Investment[] = [
     {
       id: "fund1",
       emoji: "🛡️",
       name: "Fondo de emergencia",
-      amount: "43,00",
+      amount: "1.200,00",
       currency: "USD",
       returnRate: "0.9%",
       isPositive: true,
       monthlyInvestment: "100,00",
     },
+  ];
+
+  // Fondo de Retiro
+  const retirementFunds: Investment[] = [
     {
       id: "fund2",
       emoji: "👴",
@@ -134,7 +152,11 @@ export function AllInvestmentsPage() {
   const renderInvestmentCard = (investment: Investment) => (
     <div
       key={investment.id}
-      className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 p-5 border border-gray-100"
+      onClick={() => {
+        setSelectedInvestment(investment);
+        setShowDetail(true);
+      }}
+      className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 p-5 border border-gray-100 cursor-pointer group"
     >
       <div className="flex items-start gap-4 mb-4">
         {/* Emoji icon */}
@@ -175,24 +197,28 @@ export function AllInvestmentsPage() {
             </div>
 
             <div
-              className={`rounded-lg px-2 py-1 ${
-                investment.isPositive
-                  ? "bg-gradient-to-r from-[#CEF2C5] to-[#d4f5cd]"
-                  : "bg-gradient-to-r from-red-100 to-red-200"
-              }`}
+              className={`rounded-lg px-2 py-1 ${investment.isPositive
+                ? "bg-gradient-to-r from-[#CEF2C5] to-[#d4f5cd]"
+                : "bg-gradient-to-r from-red-100 to-red-200"
+                }`}
             >
               <span
-                className={`text-xs font-semibold ${
-                  investment.isPositive ? "text-[#0D9A68]" : "text-red-700"
-                }`}
+                className={`text-xs font-semibold ${investment.isPositive ? "text-[#0D9A68]" : "text-red-700"
+                  }`}
               >
                 {investment.isPositive ? "▲" : "▼"} {investment.returnRate}
               </span>
             </div>
           </div>
 
-          {/* Monthly investment amount */}
-          {investment.monthlyInvestment && (
+          {/* Monthly investment amount or Packs count */}
+          {investment.packsCount ? (
+            <div className="flex items-center gap-2 mb-3">
+              <div className="text-xs text-gray-600">
+                <span className="font-semibold">Tenencia:</span> {investment.packsCount} packs
+              </div>
+            </div>
+          ) : investment.monthlyInvestment && (
             <div className="flex items-center gap-2 mb-3">
               <div className="text-xs text-gray-600">
                 <span className="font-semibold">Inversión mensual:</span>{" "}
@@ -216,7 +242,8 @@ export function AllInvestmentsPage() {
       {/* Action buttons */}
       <div className="flex gap-2">
         <button
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             setSelectedInvestment(investment);
             setShowAddFlow(true);
           }}
@@ -226,11 +253,7 @@ export function AllInvestmentsPage() {
           Sumar a esta inversión
         </button>
         <button
-          onClick={() => {
-            setSelectedInvestment(investment);
-            setShowDetail(true);
-          }}
-          className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all"
+          className="px-4 py-2.5 bg-gray-100 group-hover:bg-gray-200 rounded-xl transition-all"
         >
           <ChevronRight className="size-5 text-gray-600" />
         </button>
@@ -240,40 +263,81 @@ export function AllInvestmentsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Page title and CTA */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-3">
-          <div className="w-1 h-8 bg-gradient-to-b from-[#3246ff] to-[#4856ff] rounded-full" />
-          <h1 className="text-gray-900 text-3xl font-black">Todas mis inversiones</h1>
+      {/* Header with improved button placement */}
+      <div className="flex items-center justify-between font-bold">
+        <div className="flex items-center gap-4">
+          <h2 className="text-2xl font-black text-gray-900">Todas mis inversiones</h2>
+          <button
+            onClick={() => setShowProductSelector(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-[#3246ff] text-white rounded-xl font-bold text-sm hover:bg-[#2635c2] transition-colors shadow-lg hover:shadow-indigo-500/30 transform hover:-translate-y-0.5"
+          >
+            <Plus className="size-4" />
+            Crear nueva inversión
+          </button>
         </div>
 
-        {/* Create new investment CTA - moved here */}
-        <button
-          onClick={() => alert("Próximamente: Crear nueva inversión")}
-          className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[#3246ff] to-[#4856ff] text-white hover:from-[#4856ff] hover:to-[#3246ff] transition-all shadow-md hover:shadow-lg hover:scale-105 font-bold"
-        >
-          <Plus className="size-5" />
-          Crear nueva inversión
-        </button>
+        {/* View toggle (optional, currently hidden in mock but structure allows it) */}
+        <div className="hidden md:flex bg-gray-100 p-1 rounded-xl">
+          {/* ... */}
+        </div>
       </div>
 
-      {/* Corto plazo section */}
+      {showProductSelector && (
+        <ProductSelector
+          onClose={() => setShowProductSelector(false)}
+          onSelectProduct={(product) => {
+            setShowProductSelector(false);
+
+            if (product === "welfi_pesos") {
+              setShowCreateWelfiPesosFlow(true);
+            } else {
+              alert(`Seleccionaste: ${product}. (Flujo de creación pendiente)`);
+            }
+          }}
+        />
+      )}
+
+      {/* Welfi Pesos Section */}
       <section>
         <div className="flex items-center gap-3 mb-4">
           <div className="w-1 h-6 bg-gradient-to-b from-[#3246ff] to-[#4856ff] rounded-full" />
-          <h2 className="text-gray-800 text-xl font-semibold">Corto plazo</h2>
+          <h2 className="text-gray-800 text-xl font-semibold">Welfi Pesos</h2>
           <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent" />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {shortTermInvestments.map(renderInvestmentCard)}
+          {welfiPesosInvestments.map(renderInvestmentCard)}
         </div>
       </section>
 
-      {/* Estrategias de inversión - Objetivos personales */}
+      {/* Fondo de Emergencia Section */}
+      <section>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-1 h-6 bg-gradient-to-b from-[#0D9A68] to-[#14B87D] rounded-full" />
+          <h2 className="text-gray-800 text-xl font-semibold">Fondo de Emergencia</h2>
+          <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {emergencyFunds.map(renderInvestmentCard)}
+        </div>
+      </section>
+
+      {/* Fondo de Retiro Section */}
+      <section>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-1 h-6 bg-gradient-to-b from-orange-400 to-orange-500 rounded-full" />
+          <h2 className="text-gray-800 text-xl font-semibold">Fondo de Retiro</h2>
+          <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {retirementFunds.map(renderInvestmentCard)}
+        </div>
+      </section>
+
+      {/* Objetivos Personales Section */}
       <section>
         <div className="flex items-center gap-3 mb-4">
           <div className="w-1 h-6 bg-gradient-to-b from-[#e5582f] to-[#f06844] rounded-full" />
-          <h2 className="text-gray-800 text-xl font-semibold">Estrategias de inversión - Objetivos personales</h2>
+          <h2 className="text-gray-800 text-xl font-semibold">Estrategias y objetivos personales</h2>
           <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent" />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -281,27 +345,15 @@ export function AllInvestmentsPage() {
         </div>
       </section>
 
-      {/* Packs temáticos */}
+      {/* Packs Temáticos Section */}
       <section>
         <div className="flex items-center gap-3 mb-4">
           <div className="w-1 h-6 bg-gradient-to-b from-purple-500 to-purple-600 rounded-full" />
-          <h2 className="text-gray-800 text-xl font-semibold">Packs temáticos</h2>
+          <h2 className="text-gray-800 text-xl font-semibold">Packs Temáticos</h2>
           <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent" />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {thematicPacks.map(renderInvestmentCard)}
-        </div>
-      </section>
-
-      {/* Fondos recomendados */}
-      <section>
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-1 h-6 bg-gradient-to-b from-green-500 to-green-600 rounded-full" />
-          <h2 className="text-gray-800 text-xl font-semibold">Fondos recomendados</h2>
-          <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {recommendedFunds.map(renderInvestmentCard)}
         </div>
       </section>
 
@@ -311,6 +363,14 @@ export function AllInvestmentsPage() {
           investment={selectedInvestment}
           availableBalance={availableBalance}
           onClose={() => setShowAddFlow(false)}
+        />
+      )}
+
+      {/* Create Welfi Pesos Flow */}
+      {showCreateWelfiPesosFlow && (
+        <CreateWelfiPesosFlow
+          availableBalance={availableBalance}
+          onClose={() => setShowCreateWelfiPesosFlow(false)}
         />
       )}
 

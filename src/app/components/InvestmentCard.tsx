@@ -13,12 +13,13 @@ interface InvestmentCardProps {
   onCreateNew?: () => void;
   isEmpty?: boolean;
   onViewAll?: () => void; // Nueva prop para ir a "Todas mis inversiones"
+  onAddMoney?: () => void; // Nueva prop para sumar dinero
 }
 
-export function InvestmentCard({ 
-  title, 
-  amount, 
-  currency, 
+export function InvestmentCard({
+  title,
+  amount,
+  currency,
   returnRate,
   icons = [],
   objectivesCount,
@@ -26,7 +27,8 @@ export function InvestmentCard({
   size = "default",
   onCreateNew,
   isEmpty,
-  onViewAll
+  onViewAll,
+  onAddMoney
 }: InvestmentCardProps) {
   const [showTooltip, setShowTooltip] = useState(false);
 
@@ -35,11 +37,11 @@ export function InvestmentCard({
     return (
       <button
         onClick={onCreateNew}
-        className="group relative bg-gradient-to-br from-blue-50 via-white to-purple-50 rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 p-8 flex flex-col items-center justify-center h-full border-2 border-dashed border-[#3246ff]/30 hover:border-[#3246ff] hover:-translate-y-2 hover:scale-[1.02] overflow-hidden"
+        className="group relative bg-gradient-to-br from-blue-50 via-white to-purple-50 rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 p-8 flex flex-col items-center justify-center h-full border-2 border-dashed border-[#3246ff]/30 hover:border-[#3246ff] hover:-translate-y-2 hover:scale-[1.02] overflow-hidden min-w-[260px]"
       >
         {/* Animated gradient background */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#3246ff]/5 via-transparent to-[#e5582f]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-        
+
         {/* Content */}
         <div className="relative z-10 flex flex-col items-center gap-4">
           {/* Product name - prominent */}
@@ -81,9 +83,9 @@ export function InvestmentCard({
   return (
     <button
       onClick={onViewAll}
-      className="group bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-6 flex flex-col justify-between h-full border border-gray-100 hover:border-[#3246ff]/20 hover:-translate-y-1 w-full text-left cursor-pointer"
+      className="group bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-6 flex flex-col justify-between h-full border border-gray-100 hover:border-[#3246ff]/20 hover:-translate-y-1 w-full text-left cursor-pointer min-w-[260px]"
     >
-      
+
       <div className="flex-1 flex flex-col justify-center my-4">
         {/* Product name - PROMINENT with gradient and animation */}
         <div className="mb-6 relative">
@@ -93,7 +95,7 @@ export function InvestmentCard({
           {/* Decorative underline */}
           <div className="mt-2 h-1 w-16 mx-auto bg-gradient-to-r from-transparent via-[#3246ff] to-transparent rounded-full opacity-50 group-hover:opacity-100 group-hover:w-24 transition-all duration-300" />
         </div>
-        
+
         {/* Total invertido with objectives count */}
         {objectivesCount !== undefined ? (
           <p className="text-gray-400 text-xs mb-2 text-center font-medium">
@@ -102,14 +104,14 @@ export function InvestmentCard({
         ) : (
           <p className="text-gray-400 text-xs mb-2 text-center font-medium">Total invertido</p>
         )}
-        
+
         {/* Amount with return rate */}
         <div className="flex flex-col items-center gap-3">
           <div className="flex items-baseline justify-center gap-2">
             <p className="text-3xl font-black text-gray-900">{amount}</p>
             <p className="text-gray-500 text-sm">{currency}</p>
           </div>
-          
+
           {/* Return rate badge - clickeable with tooltip */}
           <div className="relative">
             <div
@@ -121,7 +123,7 @@ export function InvestmentCard({
               <span className="text-[#0D9A68] text-sm font-semibold">{returnRate}</span>
               <Info className="size-3 text-[#0D9A68]/70" />
             </div>
-            
+
             {/* Tooltip */}
             {showTooltip && (
               <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap z-10 animate-in fade-in duration-200">
@@ -133,32 +135,32 @@ export function InvestmentCard({
         </div>
       </div>
 
-      {/* Icons row - centered - only show if no objectives count */}
-      {!objectivesCount && icons && icons.length > 0 && (
-        <div className="flex items-center justify-center gap-2 mb-4">
-          {icons.map((icon, index) => (
-            <span key={index} className="text-2xl">{icon}</span>
-          ))}
-        </div>
-      )}
+      {/* Action Buttons Container */}
+      <div className="flex flex-col gap-2 mt-4 w-full">
+        {/* ADD MONEY BUTTON */}
+        {onAddMoney && (
+          <div className="w-full" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={onAddMoney}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#3246ff] to-[#4856ff] text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg hover:from-[#4856ff] hover:to-[#3246ff] transition-all w-full transform hover:-translate-y-0.5"
+            >
+              <Plus className="size-4" />
+              Sumar dinero
+            </button>
+          </div>
+        )}
 
-      {/* Ver detalles button */}
-      {onViewAll && (
-        <div className="mt-4 flex items-center justify-center gap-2 text-[#3246ff] text-sm font-bold group-hover:gap-3 transition-all">
-          <Eye className="size-4" />
-          <span>Ver inversiones</span>
-        </div>
-      )}
+      </div>
 
-      {/* Botón crear nueva inversión */}
-      {onCreateNew && !onViewAll && (
-        <div className="mt-4 w-full" onClick={(e) => e.stopPropagation()}>
+      {/* Secondary Action (Crear nuevo) */}
+      {onCreateNew && !isEmpty && (
+        <div className="w-full mt-2" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={onCreateNew}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#3246ff] to-[#4856ff] text-white rounded-lg text-sm font-medium hover:shadow-lg transition-all w-full"
+            className="flex items-center justify-center gap-2 text-[#3246ff] text-sm font-bold hover:gap-3 transition-all py-2 w-full group/create"
           >
             <Plus className="size-4" />
-            Crear nueva inversión
+            <span>Crear nuevo</span>
           </button>
         </div>
       )}

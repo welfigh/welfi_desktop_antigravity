@@ -10,6 +10,9 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+import { WithdrawFromInvestmentFlow } from "./WithdrawFromInvestmentFlow";
+import { AddToInvestmentFlow } from "./AddToInvestmentFlow";
+
 interface InvestmentDetailPageProps {
   onBack: () => void;
   investment: {
@@ -31,6 +34,8 @@ export function InvestmentDetailPage({ onBack, investment }: InvestmentDetailPag
   const [projectionMonths, setProjectionMonths] = useState(12);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(investment.name);
+  const [showWithdrawFlow, setShowWithdrawFlow] = useState(false);
+  const [showAddFlow, setShowAddFlow] = useState(false);
 
   // Mock data para el gráfico de evolución
   const evolutionData = [
@@ -53,20 +58,20 @@ export function InvestmentDetailPage({ onBack, investment }: InvestmentDetailPag
     const currentValue = parseFloat(investment.amount.replace(/\./g, "").replace(",", "."));
     const tnaRate = parseFloat(investment.tna?.replace("%", "") || "38") / 100;
     const monthlyRate = tnaRate / 12;
-    
+
     const projectionData = [];
     let balance = currentValue + oneTimeAmount;
-    
+
     projectionData.push({ month: 0, value: Math.round(balance) });
-    
+
     for (let i = 1; i <= projectionMonths; i++) {
       balance = balance * (1 + monthlyRate) + monthlyAmount;
-      projectionData.push({ 
-        month: i, 
-        value: Math.round(balance) 
+      projectionData.push({
+        month: i,
+        value: Math.round(balance)
       });
     }
-    
+
     return projectionData;
   };
 
@@ -249,11 +254,10 @@ export function InvestmentDetailPage({ onBack, investment }: InvestmentDetailPag
               </>
             )}
             <span
-              className={`px-3 py-1 rounded-full text-sm font-bold ${
-                investment.isPositive
-                  ? "bg-[#CEF2C5] text-green-800"
-                  : "bg-red-100 text-red-800"
-              }`}
+              className={`px-3 py-1 rounded-full text-sm font-bold ${investment.isPositive
+                ? "bg-[#CEF2C5] text-green-800"
+                : "bg-red-100 text-red-800"
+                }`}
             >
               {investment.isPositive ? "+" : ""}{investment.returnRate}
             </span>
@@ -305,54 +309,71 @@ export function InvestmentDetailPage({ onBack, investment }: InvestmentDetailPag
 
           {/* Action buttons */}
           <div className="grid grid-cols-2 gap-4">
-            <button className="py-4 rounded-2xl bg-gradient-to-r from-[#3246ff] to-[#4856ff] text-white font-bold text-lg hover:from-[#4856ff] hover:to-[#3246ff] transition-all shadow-lg hover:shadow-xl">
+            <button
+              onClick={() => setShowAddFlow(true)}
+              className="py-4 rounded-2xl bg-gradient-to-r from-[#3246ff] to-[#4856ff] text-white font-bold text-lg hover:from-[#4856ff] hover:to-[#3246ff] transition-all shadow-lg hover:shadow-xl"
+            >
               Sumar a esta inversión
             </button>
-            <button className="py-4 rounded-2xl border-2 border-[#3246ff] text-[#3246ff] font-bold text-lg hover:bg-blue-50 transition-all">
+            <button
+              onClick={() => setShowWithdrawFlow(true)}
+              className="py-4 rounded-2xl border-2 border-[#3246ff] text-[#3246ff] font-bold text-lg hover:bg-blue-50 transition-all"
+            >
               Retirar de esta inversión
             </button>
           </div>
         </div>
 
+        {/* Flows Modals */}
+        {showAddFlow && (
+          <AddToInvestmentFlow
+            investment={investment}
+            onClose={() => setShowAddFlow(false)}
+            availableBalance={{ ars: "500.000,00", usd: "1.200,00" }} // Mock balance
+          />
+        )}
+        {showWithdrawFlow && (
+          <WithdrawFromInvestmentFlow
+            investment={investment}
+            onClose={() => setShowWithdrawFlow(false)}
+          />
+        )}
+
         {/* 2. TABS */}
         <div className="bg-white rounded-2xl shadow-lg p-2 mb-6 flex gap-2 overflow-x-auto">
           <button
             onClick={() => setActiveTab("overview")}
-            className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all whitespace-nowrap ${
-              activeTab === "overview"
-                ? "bg-gradient-to-r from-[#3246ff] to-[#4856ff] text-white shadow-lg"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === "overview"
+              ? "bg-gradient-to-r from-[#3246ff] to-[#4856ff] text-white shadow-lg"
+              : "text-gray-600 hover:bg-gray-100"
+              }`}
           >
             Evolución
           </button>
           <button
             onClick={() => setActiveTab("movements")}
-            className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all whitespace-nowrap ${
-              activeTab === "movements"
-                ? "bg-gradient-to-r from-[#3246ff] to-[#4856ff] text-white shadow-lg"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === "movements"
+              ? "bg-gradient-to-r from-[#3246ff] to-[#4856ff] text-white shadow-lg"
+              : "text-gray-600 hover:bg-gray-100"
+              }`}
           >
             Movimientos
           </button>
           <button
             onClick={() => setActiveTab("calendar")}
-            className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all whitespace-nowrap ${
-              activeTab === "calendar"
-                ? "bg-gradient-to-r from-[#3246ff] to-[#4856ff] text-white shadow-lg"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === "calendar"
+              ? "bg-gradient-to-r from-[#3246ff] to-[#4856ff] text-white shadow-lg"
+              : "text-gray-600 hover:bg-gray-100"
+              }`}
           >
             Calendario
           </button>
           <button
             onClick={() => setActiveTab("characteristics")}
-            className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all whitespace-nowrap ${
-              activeTab === "characteristics"
-                ? "bg-gradient-to-r from-[#3246ff] to-[#4856ff] text-white shadow-lg"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === "characteristics"
+              ? "bg-gradient-to-r from-[#3246ff] to-[#4856ff] text-white shadow-lg"
+              : "text-gray-600 hover:bg-gray-100"
+              }`}
           >
             Características
           </button>
@@ -410,11 +431,10 @@ export function InvestmentDetailPage({ onBack, investment }: InvestmentDetailPag
                 <button
                   key={period}
                   onClick={() => setSelectedPeriod(period)}
-                  className={`px-6 py-2 rounded-xl font-bold transition-all ${
-                    selectedPeriod === period
-                      ? "bg-gradient-to-r from-[#3246ff] to-[#4856ff] text-white shadow-lg"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
+                  className={`px-6 py-2 rounded-xl font-bold transition-all ${selectedPeriod === period
+                    ? "bg-gradient-to-r from-[#3246ff] to-[#4856ff] text-white shadow-lg"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
                 >
                   {period}
                 </button>
@@ -434,11 +454,10 @@ export function InvestmentDetailPage({ onBack, investment }: InvestmentDetailPag
                 >
                   <div className="flex items-center gap-4">
                     <div
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                        movement.type === "aporte"
-                          ? "bg-green-100"
-                          : "bg-orange-100"
-                      }`}
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center ${movement.type === "aporte"
+                        ? "bg-green-100"
+                        : "bg-orange-100"
+                        }`}
                     >
                       <span className="text-2xl">
                         {movement.type === "aporte" ? "📥" : "📤"}
@@ -453,20 +472,18 @@ export function InvestmentDetailPage({ onBack, investment }: InvestmentDetailPag
                   </div>
                   <div className="text-right">
                     <p
-                      className={`text-xl font-black ${
-                        movement.type === "aporte"
-                          ? "text-green-600"
-                          : "text-orange-600"
-                      }`}
+                      className={`text-xl font-black ${movement.type === "aporte"
+                        ? "text-green-600"
+                        : "text-orange-600"
+                        }`}
                     >
                       {movement.type === "aporte" ? "+" : "-"}${movement.amount}
                     </p>
                     <span
-                      className={`text-xs font-bold px-2 py-1 rounded-full ${
-                        movement.status === "confirmado"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-yellow-100 text-yellow-800"
-                      }`}
+                      className={`text-xs font-bold px-2 py-1 rounded-full ${movement.status === "confirmado"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-yellow-100 text-yellow-800"
+                        }`}
                     >
                       {movement.status}
                     </span>
@@ -486,11 +503,10 @@ export function InvestmentDetailPage({ onBack, investment }: InvestmentDetailPag
               {monthlyContributions.map((contribution, index) => (
                 <div
                   key={index}
-                  className={`p-4 rounded-2xl border-2 transition-all ${
-                    contribution.completed
-                      ? "border-green-300 bg-green-50"
-                      : "border-gray-200 bg-gray-50"
-                  }`}
+                  className={`p-4 rounded-2xl border-2 transition-all ${contribution.completed
+                    ? "border-green-300 bg-green-50"
+                    : "border-gray-200 bg-gray-50"
+                    }`}
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
@@ -508,17 +524,15 @@ export function InvestmentDetailPage({ onBack, investment }: InvestmentDetailPag
                     </div>
                   </div>
                   {/* Monto aportado */}
-                  <div className={`mt-2 pt-3 border-t ${
-                    contribution.completed 
-                      ? "border-green-200" 
-                      : "border-gray-200"
-                  }`}>
-                    <p className="text-xs text-gray-600 mb-1">Aportado</p>
-                    <p className={`text-lg font-black ${
-                      contribution.completed 
-                        ? "text-green-700" 
-                        : "text-gray-400"
+                  <div className={`mt-2 pt-3 border-t ${contribution.completed
+                    ? "border-green-200"
+                    : "border-gray-200"
                     }`}>
+                    <p className="text-xs text-gray-600 mb-1">Aportado</p>
+                    <p className={`text-lg font-black ${contribution.completed
+                      ? "text-green-700"
+                      : "text-gray-400"
+                      }`}>
                       ${contribution.amount} {contribution.currency}
                     </p>
                   </div>
@@ -541,7 +555,7 @@ export function InvestmentDetailPage({ onBack, investment }: InvestmentDetailPag
                   {Math.round(
                     (monthlyContributions.filter((c) => c.completed).length /
                       monthlyContributions.length) *
-                      100
+                    100
                   )}
                   %
                 </p>
@@ -574,7 +588,7 @@ export function InvestmentDetailPage({ onBack, investment }: InvestmentDetailPag
               <Info className="size-6 text-[#3246ff]" />
               Características de esta inversión
             </h2>
-            
+
             <div className="grid md:grid-cols-2 gap-6">
               {/* Riesgo */}
               <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-5 border-2 border-blue-200">
@@ -632,7 +646,7 @@ export function InvestmentDetailPage({ onBack, investment }: InvestmentDetailPag
               <TrendingUp className="size-6" />
               Tu progreso como inversor
             </h2>
-            
+
             <div className="grid md:grid-cols-3 gap-4">
               {/* Días invirtiendo */}
               <div className="bg-white/95 backdrop-blur rounded-2xl p-5 border-2 border-white/50 shadow-lg">
@@ -734,7 +748,7 @@ export function InvestmentDetailPage({ onBack, investment }: InvestmentDetailPag
                     ¡Vas excelente! Seguí invirtiendo de forma consistente
                   </p>
                   <p className="text-sm text-gray-700">
-                    Los inversores que mantienen sus inversiones por más de 1 año y aportan mensualmente 
+                    Los inversores que mantienen sus inversiones por más de 1 año y aportan mensualmente
                     obtienen en promedio <strong className="text-[#3246ff]">43% más de rendimiento</strong> que quienes retiran anticipadamente.
                   </p>
                 </div>
@@ -748,16 +762,16 @@ export function InvestmentDetailPage({ onBack, investment }: InvestmentDetailPag
           <h2 className="text-2xl font-black text-gray-900 mb-6 flex items-center gap-2">
             📊 Simulador y proyección futura
           </h2>
-          
+
           {/* Explicación del simulador */}
           <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6 mb-6 border-2 border-blue-200">
             <p className="text-sm text-gray-700 leading-relaxed">
-              Te mostramos una <strong className="text-[#3246ff]">proyección teniendo en cuenta la rentabilidad actual de esta cartera</strong>, 
-              las condiciones de mercado, y los posibles <strong className="text-[#3246ff]">aportes únicos o mensuales</strong> que 
+              Te mostramos una <strong className="text-[#3246ff]">proyección teniendo en cuenta la rentabilidad actual de esta cartera</strong>,
+              las condiciones de mercado, y los posibles <strong className="text-[#3246ff]">aportes únicos o mensuales</strong> que
               vayas a hacer hoy o en el futuro. Modificá los valores para ver diferentes escenarios.
             </p>
           </div>
-          
+
           {/* Current value - non editable */}
           <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-6 mb-6 border-2 border-blue-300">
             <p className="text-sm text-gray-600 mb-2">Valor actual de tu inversión</p>
@@ -768,7 +782,7 @@ export function InvestmentDetailPage({ onBack, investment }: InvestmentDetailPag
               Este monto se proyecta automáticamente con la TNA {investment.tna || "38%"}
             </p>
           </div>
-          
+
           {/* Monthly investment configured */}
           {monthlyAmount > 0 ? (
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 mb-6 border-2 border-green-300">
@@ -921,9 +935,9 @@ export function InvestmentDetailPage({ onBack, investment }: InvestmentDetailPag
               <div className="text-xs text-gray-700 leading-relaxed">
                 <p className="font-bold text-amber-900 mb-1">⚠️ Información importante</p>
                 <p>
-                  Las proyecciones mostradas son estimaciones calculadas en base a la TNA actual ({investment.tna || "38.0%"}) y los parámetros ingresados. 
-                  <strong className="text-gray-900"> Estos valores no constituyen una promesa ni garantía de rentabilidad futura.</strong> Los rendimientos pasados no garantizan resultados futuros. 
-                  Toda inversión conlleva riesgos, incluyendo la posible pérdida de capital. Las tasas de interés y condiciones de mercado pueden variar. 
+                  Las proyecciones mostradas son estimaciones calculadas en base a la TNA actual ({investment.tna || "38.0%"}) y los parámetros ingresados.
+                  <strong className="text-gray-900"> Estos valores no constituyen una promesa ni garantía de rentabilidad futura.</strong> Los rendimientos pasados no garantizan resultados futuros.
+                  Toda inversión conlleva riesgos, incluyendo la posible pérdida de capital. Las tasas de interés y condiciones de mercado pueden variar.
                   Te recomendamos leer los términos y condiciones antes de invertir.
                 </p>
               </div>

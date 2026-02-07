@@ -1,7 +1,6 @@
 import { X, ArrowRight, Check, ChevronLeft } from "lucide-react";
 import { useState } from "react";
 import rocketImage from "../../assets/2e0e2f2f7c7a72aa9e737bca0a0a071131e2ad74.png";
-
 interface AddToInvestmentFlowProps {
   onClose: () => void;
   investment: {
@@ -16,13 +15,11 @@ interface AddToInvestmentFlowProps {
     usd: string;
   };
 }
-
 export function AddToInvestmentFlow({ onClose, investment, availableBalance }: AddToInvestmentFlowProps) {
   const [step, setStep] = useState(1); // 1: Amount, 2: Confirmation, 3: Success
   const [selectedCurrency, setSelectedCurrency] = useState<"ARS" | "USD">(
     investment.currency as "ARS" | "USD"
   );
-
   // Initialize with monthly investment amount if available and currency matches
   const getInitialAmount = () => {
     if (investment.monthlyInvestment && investment.currency === "ARS") {
@@ -33,16 +30,12 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
     }
     return "";
   };
-
   const [amount, setAmount] = useState(getInitialAmount());
   const [acceptTerms, setAcceptTerms] = useState(false);
-
   const exchangeRate = 1150; // Tipo de cambio MEP ejemplo
-
   // Handle currency change and auto-fill amount
   const handleCurrencyChange = (currency: "ARS" | "USD") => {
     setSelectedCurrency(currency);
-
     // If switching to USD and investment is in ARS, convert the monthly investment
     if (currency === "USD" && investment.currency === "ARS" && investment.monthlyInvestment) {
       const arsAmount = parseFloat(investment.monthlyInvestment.replace(",", "."));
@@ -51,13 +44,11 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
         setAmount(usdEquivalent.replace(".", ","));
       }
     }
-
     // If switching to ARS and investment is in ARS, set to monthly investment
     if (currency === "ARS" && investment.currency === "ARS" && investment.monthlyInvestment) {
       setAmount(investment.monthlyInvestment);
     }
   };
-
   const handleConfirm = () => {
     setStep(3);
     setTimeout(() => {
@@ -68,13 +59,11 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
       setAcceptTerms(false);
     }, 3000);
   };
-
   // Calculate equivalent amounts
   const getEquivalentAmount = () => {
     if (!amount) return "";
     const numAmount = parseFloat(amount.replace(",", "."));
     if (isNaN(numAmount)) return "";
-
     if (selectedCurrency === "USD" && investment.currency === "ARS") {
       return (numAmount * exchangeRate).toFixed(2);
     }
@@ -83,10 +72,8 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
     }
     return "";
   };
-
   const getMonthlyInvestmentDisplay = () => {
     if (!investment.monthlyInvestment) return "";
-
     if (investment.currency === "USD") {
       const usdAmount = investment.monthlyInvestment;
       const arsEquivalent = (parseFloat(usdAmount.replace(",", ".")) * exchangeRate).toFixed(2);
@@ -94,7 +81,13 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
     }
     return `${investment.monthlyInvestment} ${investment.currency}`;
   };
-
+  const handleInvestAll = () => {
+    if (selectedCurrency === "ARS") {
+      setAmount(availableBalance.ars);
+    } else {
+      setAmount(availableBalance.usd);
+    }
+  };
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -119,7 +112,6 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
                 <X className="size-5 text-gray-600" />
               </button>
             </div>
-
             {/* Available balance */}
             <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-4 mb-4">
               <p className="text-sm text-gray-600 mb-2">Dinero disponible para invertir</p>
@@ -137,7 +129,6 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
                 </div>
               </div>
             </div>
-
             {/* Current investment balance */}
             <div className="bg-gray-50 rounded-2xl p-4 mb-6">
               <p className="text-sm text-gray-600 mb-1">Saldo actual</p>
@@ -145,7 +136,6 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
                 {investment.amount} <span className="text-lg text-gray-600">{investment.currency}</span>
               </p>
             </div>
-
             {/* Monthly investment configured - destacado */}
             {investment.monthlyInvestment && (
               <div className="bg-gradient-to-r from-blue-100 to-purple-100 border-2 border-blue-300 rounded-2xl p-4 mb-6">
@@ -160,7 +150,6 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
                 )}
               </div>
             )}
-
             {/* Currency selection */}
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -170,8 +159,8 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
                 <button
                   onClick={() => handleCurrencyChange("ARS")}
                   className={`p-4 rounded-xl border-2 transition-all font-semibold ${selectedCurrency === "ARS"
-                      ? "border-[#3246ff] bg-blue-50 text-[#3246ff]"
-                      : "border-gray-200 hover:border-gray-300 text-gray-700"
+                    ? "border-[#3246ff] bg-blue-50 text-[#3246ff]"
+                    : "border-gray-200 hover:border-gray-300 text-gray-700"
                     }`}
                 >
                   <div className="text-2xl mb-1">🇦🇷</div>
@@ -180,8 +169,8 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
                 <button
                   onClick={() => handleCurrencyChange("USD")}
                   className={`p-4 rounded-xl border-2 transition-all font-semibold ${selectedCurrency === "USD"
-                      ? "border-[#3246ff] bg-blue-50 text-[#3246ff]"
-                      : "border-gray-200 hover:border-gray-300 text-gray-700"
+                    ? "border-[#3246ff] bg-blue-50 text-[#3246ff]"
+                    : "border-gray-200 hover:border-gray-300 text-gray-700"
                     }`}
                 >
                   <div className="text-2xl mb-1">💵</div>
@@ -196,12 +185,19 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
                 </div>
               )}
             </div>
-
             {/* Amount input */}
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                ¿Cuánto querés sumar?
-              </label>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-semibold text-gray-700">
+                  ¿Cuánto querés sumar?
+                </label>
+                <button
+                  onClick={handleInvestAll}
+                  className="text-sm font-bold text-[#3246ff] hover:text-[#2635c2] transition-colors"
+                >
+                  Invertir todo disponible
+                </button>
+              </div>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-black text-gray-400">
                   $
@@ -226,7 +222,6 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
                 </p>
               )}
             </div>
-
             {/* Continue button */}
             <button
               onClick={() => setStep(2)}
@@ -238,7 +233,6 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
             </button>
           </div>
         )}
-
         {/* Step 2: Confirmation */}
         {step === 2 && (
           <div className="p-8">
@@ -260,13 +254,11 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
                 <X className="size-5 text-gray-600" />
               </button>
             </div>
-
             {/* Title */}
             <div className="text-center mb-8">
               <h2 className="text-3xl font-black text-gray-900 mb-2">¿Estamos ok?</h2>
               <p className="text-lg text-gray-600 font-semibold">{investment.name}</p>
             </div>
-
             {/* Summary card */}
             <div className="bg-gray-50 border-2 border-gray-200 rounded-2xl p-6 mb-6">
               {/* If converting USD to ARS */}
@@ -281,7 +273,6 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
                       </span>
                     </div>
                   </div>
-
                   {/* Dólar MEP */}
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
                     <div className="flex items-center justify-between">
@@ -293,7 +284,6 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
                       </span>
                     </div>
                   </div>
-
                   {/* Recibes en ARS */}
                   <div className="bg-white border border-gray-200 rounded-xl p-4 mb-3">
                     <div className="flex items-center justify-between">
@@ -303,9 +293,7 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
                       </span>
                     </div>
                   </div>
-
                   <div className="border-t-2 border-dashed border-gray-300 my-4"></div>
-
                   {/* Monto a invertir */}
                   <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4">
                     <div className="flex items-center justify-between">
@@ -317,7 +305,6 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
                   </div>
                 </>
               )}
-
               {/* If same currency or ARS to USD */}
               {!(selectedCurrency === "USD" && investment.currency === "ARS") && (
                 <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
@@ -335,21 +322,27 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
                 </div>
               )}
             </div>
-
             {/* Warnings */}
             <div className="space-y-3 mb-6">
               {/* Processing time warning */}
               <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-4">
                 <div className="flex gap-3">
                   <span className="text-yellow-600 flex-shrink-0">🔒</span>
-                  <p className="text-sm text-gray-700">
-                    Al confirmar la operación, pasará a encontrarse en estado{" "}
-                    <span className="font-bold">"pendiente"</span>. La misma puede demorar hasta{" "}
-                    <span className="font-bold">48 hs hábiles</span> en concretarse.
-                  </p>
+                  <div className="text-sm text-gray-700 space-y-2">
+                    <p>
+                      Al confirmar, la operación pasará a estado "pendiente" y se ejecutará en <span className="font-bold">24-48 hs hábiles</span>.
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      Tené en cuenta los horarios de corte para que la operación ingrese hoy:
+                      <br />• <strong>FCI:</strong> hasta las 15:00 hs.
+                      <br />• <strong>Otros instrumentos:</strong> hasta las 16:45 hs.
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      Si operás después de este horario o en días no hábiles, la solicitud pasará automáticamente para el día hábil siguiente.
+                    </p>
+                  </div>
                 </div>
               </div>
-
               {/* MEP rate warning - only if converting USD to ARS */}
               {selectedCurrency === "USD" && investment.currency === "ARS" && (
                 <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
@@ -363,7 +356,6 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
                 </div>
               )}
             </div>
-
             {/* Terms and conditions */}
             <div className="bg-gray-50 border-2 border-gray-200 rounded-2xl p-4 mb-6">
               <label className="flex items-start gap-3 cursor-pointer">
@@ -387,7 +379,6 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
                 </span>
               </label>
             </div>
-
             {/* Confirm button */}
             <button
               onClick={handleConfirm}
@@ -398,7 +389,6 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
             </button>
           </div>
         )}
-
         {/* Step 3: Success */}
         {step === 3 && (
           <div className="p-8 text-center relative">
@@ -409,18 +399,15 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
             >
               <X className="size-5 text-gray-600" />
             </button>
-
             {/* Rocket illustration */}
             <div className="mb-6 flex justify-center">
               <img src={rocketImage} alt="Rocket" className="w-64 h-64 object-contain" />
             </div>
-
             {/* Title with underline */}
             <div className="mb-6">
               <h2 className="text-4xl font-black text-gray-900 mb-2">¡Listo!</h2>
               <div className="w-24 h-1 bg-gradient-to-r from-[#3246ff] to-[#e5582f] mx-auto rounded-full" />
             </div>
-
             {/* Success message */}
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-6 mb-6">
               <h3 className="text-xl font-black text-gray-900 mb-3">
@@ -432,7 +419,6 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
                 cuando esté confirmada.
               </p>
             </div>
-
             {/* Return to home button */}
             <button
               onClick={onClose}
