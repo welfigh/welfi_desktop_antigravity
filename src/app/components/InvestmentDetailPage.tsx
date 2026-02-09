@@ -1,4 +1,4 @@
-import { ArrowLeft, TrendingUp, Calendar, Clock, Info, Pencil } from "lucide-react";
+import { ArrowLeft, TrendingUp, Calendar, Clock, Info, Pencil, PieChart as PieChartIcon } from "lucide-react";
 import { useState } from "react";
 import {
   LineChart,
@@ -7,6 +7,10 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
   ResponsiveContainer,
 } from "recharts";
 
@@ -27,7 +31,7 @@ interface InvestmentDetailPageProps {
 }
 
 export function InvestmentDetailPage({ onBack, investment }: InvestmentDetailPageProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "movements" | "calendar" | "characteristics">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "movements" | "calendar" | "characteristics" | "composition">("overview");
   const [selectedPeriod, setSelectedPeriod] = useState<"1M" | "3M" | "6M" | "1A" | "Todo">("Todo");
   const [monthlyAmount, setMonthlyAmount] = useState(500);
   const [oneTimeAmount, setOneTimeAmount] = useState(0);
@@ -340,6 +344,7 @@ export function InvestmentDetailPage({ onBack, investment }: InvestmentDetailPag
         )}
 
         {/* 2. TABS */}
+        {/* 2. TABS */}
         <div className="bg-white rounded-2xl shadow-lg p-2 mb-6 flex gap-2 overflow-x-auto">
           <button
             onClick={() => setActiveTab("overview")}
@@ -376,6 +381,15 @@ export function InvestmentDetailPage({ onBack, investment }: InvestmentDetailPag
               }`}
           >
             Características
+          </button>
+          <button
+            onClick={() => setActiveTab("composition")}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === "composition"
+              ? "bg-gradient-to-r from-[#3246ff] to-[#4856ff] text-white shadow-lg"
+              : "text-gray-600 hover:bg-gray-100"
+              }`}
+          >
+            Composición
           </button>
         </div>
 
@@ -589,7 +603,7 @@ export function InvestmentDetailPage({ onBack, investment }: InvestmentDetailPag
               Características de esta inversión
             </h2>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
               {/* Riesgo */}
               <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-5 border-2 border-blue-200">
                 <div className="flex items-center justify-between mb-2">
@@ -629,6 +643,137 @@ export function InvestmentDetailPage({ onBack, investment }: InvestmentDetailPag
                 <p className="text-2xl font-black text-orange-700 mb-1">24 horas</p>
                 <p className="text-xs text-gray-600">Tiempo para recibir tu dinero</p>
               </div>
+            </div>
+
+            {/* List Details */}
+            <div className="space-y-6">
+              {/* Moneda */}
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  Moneda <Info className="size-3 text-gray-400" />
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center text-sm p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center gap-3 text-gray-700 font-medium">
+                      <div className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-lg shadow-sm">💵</div>
+                      Estrategia en
+                    </div>
+                    <span className="font-black text-gray-900 bg-white px-3 py-1 rounded-lg border border-gray-200 shadow-sm">{investment.currency}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center gap-3 text-gray-700 font-medium">
+                      <div className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-lg shadow-sm">📥</div>
+                      Ingresás en
+                    </div>
+                    <span className="font-black text-gray-900 bg-white px-3 py-1 rounded-lg border border-gray-200 shadow-sm">ARS o USD</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center gap-3 text-gray-700 font-medium">
+                      <div className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-lg shadow-sm">📤</div>
+                      Retirás en
+                    </div>
+                    <span className="font-black text-gray-900 bg-white px-3 py-1 rounded-lg border border-gray-200 shadow-sm">ARS o USD</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rentabilidad */}
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  Rentabilidad <Info className="size-3 text-gray-400" />
+                </h3>
+                <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-green-600">
+                        <TrendingUp className="size-5" />
+                      </div>
+                      <span className="font-medium text-gray-700">Rentabilidad esperada anual</span>
+                    </div>
+                    <span className="font-black text-green-700 text-lg">{investment.tna || "CER + 2%"}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "composition" && (
+          <div className="bg-white rounded-3xl shadow-xl p-8 mb-6">
+            <h2 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-2">
+              <PieChartIcon className="size-6 text-[#3246ff]" />
+              Composición de la cartera
+            </h2>
+
+            <div className="grid md:grid-cols-2 gap-8 items-center">
+              {/* Chart */}
+              <div className="h-64 relative">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: "S&P 500", value: 45, color: "#3246ff" },
+                        { name: "NASDAQ 100", value: 35, color: "#e5582f" },
+                        { name: "Bonos Pampa Energía", value: 20, color: "#14B87D" },
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {[
+                        { name: "S&P 500", value: 45, color: "#3246ff" },
+                        { name: "NASDAQ 100", value: 35, color: "#e5582f" },
+                        { name: "Bonos Pampa Energía", value: 20, color: "#14B87D" },
+                      ].map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                      formatter={(value: number) => [`${value}%`, 'Participación']}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                {/* Center Label */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="text-center">
+                    <span className="block text-2xl font-black text-gray-900">100%</span>
+                    <span className="text-xs text-gray-500 font-bold uppercase">Diversificado</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Legend List */}
+              <div className="space-y-4">
+                {[
+                  { name: "S&P 500", value: 45, color: "bg-[#3246ff]", type: "ETF / Índice", risk: "Medio-Alto" },
+                  { name: "NASDAQ 100", value: 35, color: "bg-[#e5582f]", type: "ETF / Tecnológico", risk: "Alto" },
+                  { name: "Bonos Pampa Energía", value: 20, color: "bg-[#14B87D]", type: "Renta Fija Corp", risk: "Moderado" },
+                ].map((item) => (
+                  <div key={item.name} className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-12 rounded-full ${item.color}`} />
+                      <div>
+                        <p className="font-bold text-gray-900">{item.name}</p>
+                        <p className="text-xs text-gray-500">{item.type} • {item.risk}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-black text-gray-900">{item.value}%</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-6 p-4 bg-blue-50 rounded-2xl border border-blue-100 flex gap-3">
+              <Info className="size-5 text-blue-600 flex-shrink-0" />
+              <p className="text-sm text-blue-800">
+                Esta cartera se rebalancea automáticamente para mantener estos porcentajes y maximizar tu retorno ajustado por riesgo.
+              </p>
             </div>
           </div>
         )}

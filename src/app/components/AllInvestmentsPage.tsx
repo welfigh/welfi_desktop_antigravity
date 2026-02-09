@@ -1,9 +1,10 @@
-import { ChevronRight, Plus, Wallet, TrendingUp, Search } from "lucide-react";
+import { ChevronRight, Plus, Target } from "lucide-react";
 import { useState } from "react";
 import { AddToInvestmentFlow } from "./AddToInvestmentFlow";
 import { InvestmentDetailPage } from "./InvestmentDetailPage";
 import { ProductSelector } from "./ProductSelector";
 import { CreateWelfiPesosFlow } from "./CreateWelfiPesosFlow";
+import { ThematicPacksPage } from "./ThematicPacksPage";
 
 interface Investment {
   id: string;
@@ -14,18 +15,24 @@ interface Investment {
   returnRate: string;
   isPositive: boolean;
   progress?: number;
-  goalAmount?: string; // Monto objetivo
-  monthlyInvestment?: string; // Inversión mensual
-  tna?: string; // TNA esperada
-  packsCount?: number; // Cantidad de packs
+  goalAmount?: string;
+  monthlyInvestment?: string;
+  tna?: string;
+  packsCount?: number;
+  allowedInputCurrencies?: ("ARS" | "USD")[];
 }
 
-export function AllInvestmentsPage() {
+interface AllInvestmentsPageProps {
+  onCreateStrategy?: () => void;
+}
+
+export function AllInvestmentsPage({ onCreateStrategy }: AllInvestmentsPageProps) {
   const [showAddFlow, setShowAddFlow] = useState(false);
   const [selectedInvestment, setSelectedInvestment] = useState<Investment | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [showProductSelector, setShowProductSelector] = useState(false);
   const [showCreateWelfiPesosFlow, setShowCreateWelfiPesosFlow] = useState(false);
+  const [showThematicPacksFlow, setShowThematicPacksFlow] = useState(false);
 
   // Available balance from home
   const availableBalance = {
@@ -33,7 +40,7 @@ export function AllInvestmentsPage() {
     usd: "2.543,21"
   };
 
-  // Welfi Pesos investments - Multiple instances allowed
+  // Welfi Pesos investments
   const welfiPesosInvestments: Investment[] = [
     {
       id: "wp1",
@@ -71,18 +78,20 @@ export function AllInvestmentsPage() {
       progress: 65,
       goalAmount: "2.000,00",
       monthlyInvestment: "150,00",
+      allowedInputCurrencies: ["ARS", "USD"],
     },
     {
       id: "obj2",
       emoji: "🚗",
       name: "Auto 2026",
-      amount: "1.354,00",
-      currency: "USD",
-      returnRate: "0.4%",
-      isPositive: false,
+      amount: "1.354.000,00",
+      currency: "ARS",
+      returnRate: "35%",
+      isPositive: true,
       progress: 35,
-      goalAmount: "3.850,00",
-      monthlyInvestment: "200,00",
+      goalAmount: "3.850.000,00",
+      monthlyInvestment: "200.000,00",
+      allowedInputCurrencies: ["ARS"],
     },
     {
       id: "obj3",
@@ -95,6 +104,29 @@ export function AllInvestmentsPage() {
       progress: 80,
       goalAmount: "810,00",
       monthlyInvestment: "80,00",
+      allowedInputCurrencies: ["ARS", "USD"],
+    },
+    {
+      id: "obj_usd_only",
+      emoji: "👮",
+      name: "Bono Tesoro USA",
+      amount: "5.000,00",
+      currency: "USD",
+      returnRate: "5%",
+      isPositive: true,
+      monthlyInvestment: "100,00",
+      allowedInputCurrencies: ["USD"],
+    },
+    {
+      id: "obj_mixed_usd",
+      emoji: "🍎",
+      name: "Apple Equity",
+      amount: "2.500,00",
+      currency: "USD",
+      returnRate: "12%",
+      isPositive: true,
+      monthlyInvestment: "200,00",
+      allowedInputCurrencies: ["ARS", "USD"],
     },
   ];
 
@@ -275,11 +307,6 @@ export function AllInvestmentsPage() {
             Crear nueva inversión
           </button>
         </div>
-
-        {/* View toggle (optional, currently hidden in mock but structure allows it) */}
-        <div className="hidden md:flex bg-gray-100 p-1 rounded-xl">
-          {/* ... */}
-        </div>
       </div>
 
       {showProductSelector && (
@@ -290,6 +317,10 @@ export function AllInvestmentsPage() {
 
             if (product === "welfi_pesos") {
               setShowCreateWelfiPesosFlow(true);
+            } else if (product === "strategies" && onCreateStrategy) {
+              onCreateStrategy();
+            } else if (product === "packs") {
+              setShowThematicPacksFlow(true);
             } else {
               alert(`Seleccionaste: ${product}. (Flujo de creación pendiente)`);
             }
@@ -340,6 +371,25 @@ export function AllInvestmentsPage() {
           <h2 className="text-gray-800 text-xl font-semibold">Estrategias y objetivos personales</h2>
           <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent" />
         </div>
+
+        {/* New Strategy Title Card (Optional, or just list investments) */}
+        {!investmentStrategies.length && (
+          <div className="text-center p-8 bg-gray-50 rounded-2xl border border-dashed border-gray-300">
+            <p className="text-gray-500 mb-4">No tenés objetivos personales activos.</p>
+            <button
+              onClick={onCreateStrategy}
+              className="text-[#3246ff] font-bold hover:underline"
+            >
+              ¡Crear mi primer objetivo!
+            </button>
+          </div>
+        )}
+
+        {/* Also show button next to title if there are items, but user wants to add more? 
+            Mock doesn't show it explicitly, but common UX.
+            For now, let's keep the main "Crear nueva inversión" button as the primary driver.
+        */}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {investmentStrategies.map(renderInvestmentCard)}
         </div>
@@ -371,6 +421,14 @@ export function AllInvestmentsPage() {
         <CreateWelfiPesosFlow
           availableBalance={availableBalance}
           onClose={() => setShowCreateWelfiPesosFlow(false)}
+        />
+      )}
+
+      {/* Thematic Packs Flow */}
+      {showThematicPacksFlow && (
+        <ThematicPacksPage
+          availableBalance={availableBalance}
+          onBack={() => setShowThematicPacksFlow(false)}
         />
       )}
 

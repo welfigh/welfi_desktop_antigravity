@@ -1,4 +1,4 @@
-import { X, ArrowRight, TrendingUp } from "lucide-react";
+import { X, ArrowRight, TrendingUp, Plus } from "lucide-react";
 
 interface InvestmentOption {
     id: string;
@@ -14,9 +14,10 @@ interface InvestmentSelectionModalProps {
     investments: InvestmentOption[];
     onClose: () => void;
     onSelect: (investmentId: string) => void;
+    onCreateNew?: () => void;
 }
 
-export function InvestmentSelectionModal({ title, investments, onClose, onSelect }: InvestmentSelectionModalProps) {
+export function InvestmentSelectionModal({ title, investments, onClose, onSelect, onCreateNew }: InvestmentSelectionModalProps) {
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -69,6 +70,27 @@ export function InvestmentSelectionModal({ title, investments, onClose, onSelect
                                 </div>
                             </button>
                         ))}
+
+                        {/* Create New Option */}
+                        {onCreateNew && (
+                            <button
+                                onClick={onCreateNew}
+                                className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-dashed border-[#3246ff]/30 hover:border-[#3246ff] hover:bg-blue-50 transition-all text-left group mt-4"
+                            >
+                                <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                                    <Plus className="size-6 text-[#3246ff]" />
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="font-bold text-[#3246ff] truncate">
+                                        Crear nuevo...
+                                    </h3>
+                                    <p className="text-sm text-gray-600">
+                                        Sumar un nuevo objetivo o pack
+                                    </p>
+                                </div>
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>

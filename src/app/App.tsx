@@ -1,14 +1,10 @@
-import { Menu, HelpCircle, Bell, Settings, Search } from "lucide-react";
+import { Menu, Search, Bell, Settings, HelpCircle } from "lucide-react";
 import { useState } from "react";
 import { Sidebar } from "./components/Sidebar";
 import { BalanceCard } from "./components/BalanceCard";
 import { InvestmentCard } from "./components/InvestmentCard";
 import { ActionButton } from "./components/ActionButton";
 import { NewsCard } from "./components/NewsCard";
-import { PerformanceChart } from "./components/PerformanceChart";
-import { PortfolioDistribution } from "./components/PortfolioDistribution";
-import { QuickStats } from "./components/QuickStats";
-import { WelfiPesosFlow } from "./components/WelfiPesosFlow";
 import { TotalBalanceChart } from "./components/TotalBalanceChart";
 import { AllInvestmentsPage } from "./components/AllInvestmentsPage";
 import { MovementsPage } from "./components/MovementsPage";
@@ -17,6 +13,9 @@ import { LoginPage } from "./components/LoginPage";
 import { InvestmentSelectionModal } from "./components/InvestmentSelectionModal";
 import { AddToInvestmentFlow } from "./components/AddToInvestmentFlow";
 import { CreateWelfiPesosFlow } from "./components/CreateWelfiPesosFlow";
+import { StrategiesPage } from "./components/StrategiesPage";
+import { ProductSelector } from "./components/ProductSelector";
+import { ThematicPacksPage } from "./components/ThematicPacksPage";
 import img716 from "../assets/72384e84861ccea0025a5cb04af72b6dbb5d53f9.png";
 
 // Interface for investments (duplicated for now to keep home self-contained or could export from AllInvestmentsPage)
@@ -33,11 +32,11 @@ interface Investment {
   monthlyInvestment?: string;
   tna?: string;
   packsCount?: number;
+  allowedInputCurrencies?: ("ARS" | "USD")[];
 }
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [showWelfiPesosFlow, setShowWelfiPesosFlow] = useState(false);
   const [currentPage, setCurrentPage] = useState<"home" | "stats" | "investments" | "movements" | "settings">("home");
   const [currency, setCurrency] = useState<"ARS" | "USD">("ARS");
 
@@ -48,6 +47,10 @@ export default function App() {
   const [selectedGroupTitle, setSelectedGroupTitle] = useState("");
   const [targetInvestment, setTargetInvestment] = useState<Investment | null>(null);
   const [showCreateWelfiPesosFlow, setShowCreateWelfiPesosFlow] = useState(false);
+  const [showStrategiesPage, setShowStrategiesPage] = useState(false);
+  const [showProductSelector, setShowProductSelector] = useState(false);
+  const [showThematicPacksFlow, setShowThematicPacksFlow] = useState(false);
+  const [onModalCreate, setOnModalCreate] = useState<(() => void) | undefined>(undefined);
 
   // DATA DEFINITIONS (Mirrored from AllInvestmentsPage for Home Logic)
   const welfiPesosInvestments: Investment[] = [
@@ -56,9 +59,11 @@ export default function App() {
   ];
 
   const investmentStrategies: Investment[] = [
-    { id: "obj1", emoji: "💻", name: "Cambio de compu", amount: "1.354,00", currency: "USD", returnRate: "0.4%", isPositive: true, progress: 65, goalAmount: "2.000,00", monthlyInvestment: "150,00" },
-    { id: "obj2", emoji: "🚗", name: "Auto 2026", amount: "1.354,00", currency: "USD", returnRate: "0.4%", isPositive: false, progress: 35, goalAmount: "3.850,00", monthlyInvestment: "200,00" },
-    { id: "obj3", emoji: "🏖️", name: "Vacaciones Europa", amount: "650,00", currency: "USD", returnRate: "1.2%", isPositive: true, progress: 80, goalAmount: "810,00", monthlyInvestment: "80,00" },
+    { id: "obj1", emoji: "💻", name: "Cambio de compu", amount: "1.354,00", currency: "USD", returnRate: "0.4%", isPositive: true, progress: 65, goalAmount: "2.000,00", monthlyInvestment: "150,00", allowedInputCurrencies: ["ARS", "USD"] },
+    { id: "obj2", emoji: "🚗", name: "Auto 2026", amount: "1.354.000,00", currency: "ARS", returnRate: "35%", isPositive: true, progress: 35, goalAmount: "3.850.000,00", monthlyInvestment: "200.000,00", allowedInputCurrencies: ["ARS"] },
+    { id: "obj3", emoji: "🏖️", name: "Vacaciones Europa", amount: "650,00", currency: "USD", returnRate: "1.2%", isPositive: true, progress: 80, goalAmount: "810,00", monthlyInvestment: "80,00", allowedInputCurrencies: ["ARS", "USD"] },
+    { id: "obj_usd_only", emoji: "👮", name: "Bono Tesoro USA", amount: "5.000,00", currency: "USD", returnRate: "5%", isPositive: true, monthlyInvestment: "100,00", allowedInputCurrencies: ["USD"] },
+    { id: "obj_mixed_usd", emoji: "🍎", name: "Apple Equity", amount: "2.500,00", currency: "USD", returnRate: "12%", isPositive: true, monthlyInvestment: "200,00", allowedInputCurrencies: ["ARS", "USD"] },
   ];
 
   const thematicPacks: Investment[] = [
@@ -70,12 +75,12 @@ export default function App() {
     { id: "fund1", emoji: "🛡️", name: "Fondo de emergencia", amount: "1.200,00", currency: "USD", returnRate: "0.9%", isPositive: true, monthlyInvestment: "100,00" },
   ];
 
-  const retirementFunds: Investment[] = []; // Empty for demo of "Start now" state (or use [] if user wants empty) - Wait, mock had empty for "Welfi Dolares" and "Retirement" in App.tsx originally.
+  const retirementFunds: Investment[] = [];
 
   // Helper to handle "Add Money" click
-  const handleAddMoneyClick = (investments: Investment[], title: string) => {
+  const handleAddMoneyClick = (investments: Investment[], title: string, onCreate?: () => void) => {
     if (investments.length === 0) {
-      // Should catch the "Create" case instead, but safe guard
+      if (onCreate) onCreate();
       return;
     }
     if (investments.length === 1) {
@@ -84,7 +89,26 @@ export default function App() {
     } else {
       setSelectedInvestmentGroup(investments);
       setSelectedGroupTitle(title);
+      setOnModalCreate(() => onCreate);
       setShowSelectionModal(true);
+    }
+  };
+
+  const handleProductSelect = (productId: string) => {
+    setShowProductSelector(false);
+    switch (productId) {
+      case 'welfi_pesos':
+        setShowCreateWelfiPesosFlow(true);
+        break;
+      case 'strategies':
+        setShowStrategiesPage(true);
+        break;
+      case 'packs':
+        setShowThematicPacksFlow(true);
+        break;
+      default:
+        console.log("Selected:", productId);
+      // Implement others later
     }
   };
 
@@ -217,7 +241,7 @@ export default function App() {
                   {/* Action buttons */}
                   <div className="flex flex-wrap gap-4">
                     <ActionButton>💰 Ingresar dinero</ActionButton>
-                    <ActionButton>🏦 Retirar dinero</ActionButton>
+                    <ActionButton onClick={() => setShowProductSelector(true)}>➕ Nueva Inversión</ActionButton>
                   </div>
                 </div>
 
@@ -265,7 +289,7 @@ export default function App() {
                     objectivesCount={welfiPesosInvestments.length}
                     objectivesLabel="inversión"
                     onViewAll={() => setCurrentPage("investments")}
-                    onAddMoney={() => handleAddMoneyClick(welfiPesosInvestments, "Welfi Pesos")}
+                    onAddMoney={() => handleAddMoneyClick(welfiPesosInvestments, "Welfi Pesos", () => setShowCreateWelfiPesosFlow(true))}
                     onCreateNew={() => setShowCreateWelfiPesosFlow(true)}
                   />
                   <InvestmentCard
@@ -286,7 +310,8 @@ export default function App() {
                     objectivesCount={investmentStrategies.length}
                     objectivesLabel="objetivos"
                     onViewAll={() => setCurrentPage("investments")}
-                    onAddMoney={() => handleAddMoneyClick(investmentStrategies, "Objetivo")}
+                    onAddMoney={() => handleAddMoneyClick(investmentStrategies, "Objetivo", () => setShowStrategiesPage(true))}
+                    onCreateNew={() => setShowStrategiesPage(true)}
                   />
                   <InvestmentCard
                     title="Packs temáticos de acciones"
@@ -346,7 +371,11 @@ export default function App() {
           )}
 
           {/* INVESTMENTS PAGE */}
-          {currentPage === "investments" && <AllInvestmentsPage />}
+          {currentPage === "investments" && (
+            <AllInvestmentsPage
+              onCreateStrategy={() => setShowStrategiesPage(true)}
+            />
+          )}
 
           {/* MOVEMENTS PAGE */}
           {currentPage === "movements" && <MovementsPage />}
@@ -368,6 +397,7 @@ export default function App() {
               onClose={() => setShowSelectionModal(false)}
               title={`Sumar dinero a ${selectedGroupTitle}`}
               investments={selectedInvestmentGroup}
+              onCreateNew={onModalCreate}
               onSelect={(investmentId) => {
                 const investment = selectedInvestmentGroup.find(inv => inv.id === investmentId);
                 if (investment) {
@@ -383,6 +413,31 @@ export default function App() {
             <CreateWelfiPesosFlow
               availableBalance={availableBalanceForModal}
               onClose={() => setShowCreateWelfiPesosFlow(false)}
+            />
+          )}
+
+          {showStrategiesPage && (
+            <StrategiesPage
+              onClose={() => setShowStrategiesPage(false)}
+              onSelectStrategy={(id) => {
+                console.log("Selected strategy:", id);
+                alert("¡Próximamente! Simulador para estrategia " + id);
+              }}
+            />
+          )}
+
+          {showProductSelector && (
+            <ProductSelector
+              onClose={() => setShowProductSelector(false)}
+              onSelectProduct={handleProductSelect}
+            />
+          )}
+
+          {/* ESTADÍSTICAS */}
+          {showThematicPacksFlow && (
+            <ThematicPacksPage
+              availableBalance={availableBalanceForModal}
+              onBack={() => setShowThematicPacksFlow(false)}
             />
           )}
 

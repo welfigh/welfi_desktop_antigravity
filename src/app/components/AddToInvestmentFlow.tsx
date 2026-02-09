@@ -9,17 +9,22 @@ interface AddToInvestmentFlowProps {
     currency: string; // Moneda de la inversión (ARS o USD)
     monthlyInvestment?: string;
     amount: string; // current amount
+    allowedInputCurrencies?: ("ARS" | "USD")[];
   };
   availableBalance: {
     ars: string;
     usd: string;
   };
 }
+
 export function AddToInvestmentFlow({ onClose, investment, availableBalance }: AddToInvestmentFlowProps) {
   const [step, setStep] = useState(1); // 1: Amount, 2: Confirmation, 3: Success
   const [selectedCurrency, setSelectedCurrency] = useState<"ARS" | "USD">(
     investment.currency as "ARS" | "USD"
   );
+
+  const allowedCurrencies = investment.allowedInputCurrencies || ["ARS", "USD"];
+
   // Initialize with monthly investment amount if available and currency matches
   const getInitialAmount = () => {
     if (investment.monthlyInvestment && investment.currency === "ARS") {
@@ -30,12 +35,24 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
     }
     return "";
   };
+
   const [amount, setAmount] = useState(getInitialAmount());
   const [acceptTerms, setAcceptTerms] = useState(false);
   const exchangeRate = 1150; // Tipo de cambio MEP ejemplo
+
   // Handle currency change and auto-fill amount
   const handleCurrencyChange = (currency: "ARS" | "USD") => {
+    if (!allowedCurrencies.includes(currency)) {
+      // Generic message or specific? 
+      // User requested: "Esta inversión solo permite suscripciones en USD" (implied for ARS->USD case, but seemingly reversed in prompt).
+      // I will return a clear message based on what IS allowed.
+      const allowed = allowedCurrencies.join(" o ");
+      alert(`Esta inversión solo permite suscripciones en ${allowed === "ARS" ? "Pesos (ARS)" : "Dólares (USD)"}.`);
+      return;
+    }
+
     setSelectedCurrency(currency);
+
     // If switching to USD and investment is in ARS, convert the monthly investment
     if (currency === "USD" && investment.currency === "ARS" && investment.monthlyInvestment) {
       const arsAmount = parseFloat(investment.monthlyInvestment.replace(",", "."));
@@ -49,6 +66,7 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
       setAmount(investment.monthlyInvestment);
     }
   };
+
   const handleConfirm = () => {
     setStep(3);
     setTimeout(() => {
@@ -59,19 +77,24 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
       setAcceptTerms(false);
     }, 3000);
   };
+
   // Calculate equivalent amounts
   const getEquivalentAmount = () => {
     if (!amount) return "";
     const numAmount = parseFloat(amount.replace(",", "."));
     if (isNaN(numAmount)) return "";
+
+    // Case 3: ARS Strategy, Input USD -> Convert to ARS
     if (selectedCurrency === "USD" && investment.currency === "ARS") {
       return (numAmount * exchangeRate).toFixed(2);
     }
+    // Case 4: USD Strategy, Input ARS -> Convert to USD
     if (selectedCurrency === "ARS" && investment.currency === "USD") {
       return (numAmount / exchangeRate).toFixed(2);
     }
     return "";
   };
+
   const getMonthlyInvestmentDisplay = () => {
     if (!investment.monthlyInvestment) return "";
     if (investment.currency === "USD") {
@@ -81,6 +104,7 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
     }
     return `${investment.monthlyInvestment} ${investment.currency}`;
   };
+
   const handleInvestAll = () => {
     if (selectedCurrency === "ARS") {
       setAmount(availableBalance.ars);
@@ -88,6 +112,10 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
       setAmount(availableBalance.usd);
     }
   };
+
+  const isArsDisabled = !allowedCurrencies.includes("ARS");
+  const isUsdDisabled = !allowedCurrencies.includes("USD");
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -112,6 +140,7 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
                 <X className="size-5 text-gray-600" />
               </button>
             </div>
+
             {/* Available balance */}
             <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-4 mb-4">
               <p className="text-sm text-gray-600 mb-2">Dinero disponible para invertir</p>
@@ -129,6 +158,7 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
                 </div>
               </div>
             </div>
+
             {/* Current investment balance */}
             <div className="bg-gray-50 rounded-2xl p-4 mb-6">
               <p className="text-sm text-gray-600 mb-1">Saldo actual</p>
@@ -136,6 +166,7 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
                 {investment.amount} <span className="text-lg text-gray-600">{investment.currency}</span>
               </p>
             </div>
+
             {/* Monthly investment configured - destacado */}
             {investment.monthlyInvestment && (
               <div className="bg-gradient-to-r from-blue-100 to-purple-100 border-2 border-blue-300 rounded-2xl p-4 mb-6">
@@ -150,6 +181,7 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
                 )}
               </div>
             )}
+
             {/* Currency selection */}
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -159,28 +191,45 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
                 <button
                   onClick={() => handleCurrencyChange("ARS")}
                   className={`p-4 rounded-xl border-2 transition-all font-semibold ${selectedCurrency === "ARS"
-                    ? "border-[#3246ff] bg-blue-50 text-[#3246ff]"
-                    : "border-gray-200 hover:border-gray-300 text-gray-700"
+                      ? "border-[#3246ff] bg-blue-50 text-[#3246ff]"
+                      : isArsDisabled
+                        ? "border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed opacity-60"
+                        : "border-gray-200 hover:border-gray-300 text-gray-700"
                     }`}
                 >
                   <div className="text-2xl mb-1">🇦🇷</div>
                   Pesos (ARS)
+                  {isArsDisabled && <span className="block text-[10px] mt-1 text-red-400 font-bold">No habilitado</span>}
                 </button>
                 <button
                   onClick={() => handleCurrencyChange("USD")}
                   className={`p-4 rounded-xl border-2 transition-all font-semibold ${selectedCurrency === "USD"
-                    ? "border-[#3246ff] bg-blue-50 text-[#3246ff]"
-                    : "border-gray-200 hover:border-gray-300 text-gray-700"
+                      ? "border-[#3246ff] bg-blue-50 text-[#3246ff]"
+                      : isUsdDisabled
+                        ? "border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed opacity-60"
+                        : "border-gray-200 hover:border-gray-300 text-gray-700"
                     }`}
                 >
                   <div className="text-2xl mb-1">💵</div>
                   Dólares (USD)
+                  {isUsdDisabled && <span className="block text-[10px] mt-1 text-red-400 font-bold">No habilitado</span>}
                 </button>
               </div>
+
+              {/* Warning for MEP (USD -> ARS) */}
               {selectedCurrency === "USD" && investment.currency === "ARS" && (
                 <div className="mt-3 p-3 bg-blue-50 rounded-xl border border-blue-200">
                   <p className="text-xs text-blue-800">
                     💡 Tus USD serán convertidos a ARS mediante dólar MEP (${exchangeRate.toLocaleString("es-AR")})
+                  </p>
+                </div>
+              )}
+
+              {/* Warning for CCL/MEP Reverse (ARS -> USD) */}
+              {selectedCurrency === "ARS" && investment.currency === "USD" && (
+                <div className="mt-3 p-3 bg-blue-50 rounded-xl border border-blue-200">
+                  <p className="text-xs text-blue-800">
+                    💡 Tus ARS serán convertidos a USD al tipo de cambio estimado (${exchangeRate.toLocaleString("es-AR")})
                   </p>
                 </div>
               )}

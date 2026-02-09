@@ -152,18 +152,7 @@ export function InvestmentCard({
 
       </div>
 
-      {/* Secondary Action (Crear nuevo) */}
-      {onCreateNew && !isEmpty && (
-        <div className="w-full mt-2" onClick={(e) => e.stopPropagation()}>
-          <button
-            onClick={onCreateNew}
-            className="flex items-center justify-center gap-2 text-[#3246ff] text-sm font-bold hover:gap-3 transition-all py-2 w-full group/create"
-          >
-            <Plus className="size-4" />
-            <span>Crear nuevo</span>
-          </button>
-        </div>
-      )}
+      {/* Secondary Action (Crear nuevo) - REMOVED as per user request */}
     </button>
   );
 }
