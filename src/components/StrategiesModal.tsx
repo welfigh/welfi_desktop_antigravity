@@ -1,13 +1,15 @@
+"use client";
+
 import { X, TrendingUp, Filter, Info, ChevronRight, Shield, Zap, Target, Banknote } from "lucide-react";
 import { useState } from "react";
-import { StrategyDetail } from "../components/StrategyDetail";
+import { StrategyDetail } from "./StrategyDetail";
 
 interface StrategiesPageProps {
     onClose: () => void;
     onSelectStrategy: (strategyId: string) => void;
 }
 
-export function StrategiesPage({ onClose, onSelectStrategy }: StrategiesPageProps) {
+export default function StrategiesPage({ onClose, onSelectStrategy }: StrategiesPageProps) {
     const [filter, setFilter] = useState<"todos" | "conservador" | "moderado" | "arriesgado">("todos");
     const [selectedStrategy, setSelectedStrategy] = useState<string | null>(null);
 

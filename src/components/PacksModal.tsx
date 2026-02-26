@@ -1,6 +1,8 @@
+"use client";
+
 import { ArrowLeft, ChevronRight, TrendingUp } from "lucide-react";
 import { useState } from "react";
-import { PackDetail } from "../components/PackDetail";
+import { PackDetail } from "./PackDetail";
 
 interface Pack {
     id: string;
@@ -16,7 +18,7 @@ interface ThematicPacksPageProps {
     availableBalance: { ars: string; usd: string };
 }
 
-export function ThematicPacksPage({ onBack, availableBalance }: ThematicPacksPageProps) {
+export default function ThematicPacksPage({ onBack, availableBalance }: ThematicPacksPageProps) {
     const [selectedPack, setSelectedPack] = useState<Pack | null>(null);
 
     const packs: Pack[] = [

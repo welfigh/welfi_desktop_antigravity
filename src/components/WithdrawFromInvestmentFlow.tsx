@@ -414,7 +414,7 @@ export function WithdrawFromInvestmentFlow({ onClose, investment }: WithdrawFrom
 
                         {/* Rocket illustration (or different one for withdrawal?) - Reusing rocket for success vibe */}
                         <div className="mb-6 flex justify-center">
-                            <img src={rocketImage} alt="Success" className="w-64 h-64 object-contain" />
+                            <img src={rocketImage.src} alt="Success" className="w-64 h-64 object-contain" />
                         </div>
 
                         {/* Title */}

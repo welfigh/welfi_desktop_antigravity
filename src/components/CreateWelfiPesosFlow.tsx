@@ -546,7 +546,7 @@ export function CreateWelfiPesosFlow({ onClose, availableBalance }: CreateWelfiP
             <button onClick={onClose} className="absolute top-8 right-8 p-2 hover:bg-gray-100 rounded-full transition-colors"><X className="size-6 text-gray-600" /></button>
 
             <div className="mb-8">
-                <img src={rocketImage} alt="Success" className="w-64 h-64 object-contain animate-bounce-slow" />
+                <img src={rocketImage.src} alt="Success" className="w-64 h-64 object-contain animate-bounce-slow" />
             </div>
 
             <div className="mb-8">

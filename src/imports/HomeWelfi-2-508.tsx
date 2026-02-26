@@ -4,7 +4,7 @@ function Frame() {
   return (
     <div className="content-stretch flex flex-[1_0_0] flex-col gap-[27.51px] items-center justify-center min-h-px min-w-px relative w-full">
       <div className="h-[295px] relative shrink-0 w-[256px]" data-name="WEL_Ilustraciones_InversionConfigurada">
-        <img alt="" className="absolute inset-0 max-w-none object-cover pointer-events-none size-full" src={imgWelIlustracionesInversionConfigurada} />
+        <img alt="" className="absolute inset-0 max-w-none object-cover pointer-events-none size-full" src={imgWelIlustracionesInversionConfigurada.src} />
       </div>
       <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[#1f1d1c] text-[26.96px] text-center w-[309.212px] whitespace-pre-wrap">¡Listo!</p>
       <div className="font-['Noto_Sans:Light',sans-serif] font-light h-[104.538px] leading-[normal] relative shrink-0 text-[#1f1d1c] text-[0px] text-center w-[351.028px] whitespace-pre-wrap" style={{ fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>

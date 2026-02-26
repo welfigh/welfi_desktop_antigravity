@@ -794,7 +794,7 @@ export function WelfiPesosFlow({ availableBalanceARS, availableBalanceUSD, onClo
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="max-w-2xl w-full text-center space-y-8">
           <div className="flex justify-center">
-            <img src={imgSuccess} alt="Success" className="w-80 h-auto" />
+            <img src={imgSuccess.src} alt="Success" className="w-80 h-auto" />
           </div>
 
           <div className="space-y-6">

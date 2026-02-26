@@ -1,19 +1,21 @@
+"use client";
+
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { BalanceCard } from "../components/BalanceCard";
-import { InvestmentCard } from "../components/InvestmentCard";
-import { ActionButton } from "../components/ActionButton";
-import { NewsCard } from "../components/NewsCard";
-import { TotalBalanceChart } from "../components/TotalBalanceChart";
-import { InvestmentSelectionModal } from "../components/InvestmentSelectionModal";
-import { AddToInvestmentFlow } from "../components/AddToInvestmentFlow";
-import { CreateWelfiPesosFlow } from "../components/CreateWelfiPesosFlow";
-import { ProductSelector } from "../components/ProductSelector";
+import { useRouter } from "next/navigation";
+import { BalanceCard } from "../../components/BalanceCard";
+import { InvestmentCard } from "../../components/InvestmentCard";
+import { ActionButton } from "../../components/ActionButton";
+import { NewsCard } from "../../components/NewsCard";
+import { TotalBalanceChart } from "../../components/TotalBalanceChart";
+import { InvestmentSelectionModal } from "../../components/InvestmentSelectionModal";
+import { AddToInvestmentFlow } from "../../components/AddToInvestmentFlow";
+import { CreateWelfiPesosFlow } from "../../components/CreateWelfiPesosFlow";
+import { ProductSelector } from "../../components/ProductSelector";
 // Pages imported as components for modal flows
-import { StrategiesPage } from "./StrategiesPage";
-import { ThematicPacksPage } from "./ThematicPacksPage";
-import { TierBadge } from "../components/TierBadge";
-import { CURRENT_USER_TIER } from "../constants/tierConfig";
+import StrategiesPage from "../../components/StrategiesModal";
+import ThematicPacksPage from "../../components/PacksModal";
+import { TierBadge } from "../../components/TierBadge";
+import { CURRENT_USER_TIER } from "../../constants/tierConfig";
 import {
     welfiPesosInvestments,
     investmentStrategies,
@@ -21,10 +23,11 @@ import {
     emergencyFunds,
     retirementFunds,
     Investment
-} from "../constants/mockData";
+} from "../../constants/mockData";
 
-export function DashboardPage() {
-    const navigate = useNavigate();
+export default function DashboardPage() {
+    const router = useRouter();
+    const navigate = (path: string) => router.push(path);
     const [currency, setCurrency] = useState<"ARS" | "USD">("ARS");
 
     // Listen for sidebar 'Nueva Inversión' button

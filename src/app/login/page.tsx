@@ -1,11 +1,21 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff, ArrowRight, Lock, Mail } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+"use client";
 
-export function LoginPage() {
+import React, { useState, useEffect } from 'react';
+import { Eye, EyeOff, ArrowRight, Lock, Mail } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { useRouter } from 'next/navigation';
+
+export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const { login } = useAuth();
+    const { login, isAuthenticated } = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            router.push('/');
+        }
+    }, [isAuthenticated, router]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();

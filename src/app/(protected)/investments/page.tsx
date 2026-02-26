@@ -1,14 +1,17 @@
+"use client";
+
 import { ChevronRight, Plus } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { AddToInvestmentFlow } from "../components/AddToInvestmentFlow";
-import { ProductSelector } from "../components/ProductSelector";
-import { CreateWelfiPesosFlow } from "../components/CreateWelfiPesosFlow";
-import { ThematicPacksPage } from "./ThematicPacksPage";
-import { welfiPesosInvestments, investmentStrategies, thematicPacks, emergencyFunds, retirementFunds, Investment } from "../constants/mockData";
+import { useRouter } from "next/navigation";
+import { AddToInvestmentFlow } from "../../../components/AddToInvestmentFlow";
+import { ProductSelector } from "../../../components/ProductSelector";
+import { CreateWelfiPesosFlow } from "../../../components/CreateWelfiPesosFlow";
+import ThematicPacksPage from "../../../components/PacksModal";
+import { welfiPesosInvestments, investmentStrategies, thematicPacks, emergencyFunds, retirementFunds, Investment } from "../../../constants/mockData";
 
-export function InvestmentsPage() {
-  const navigate = useNavigate();
+export default function InvestmentsPage() {
+  const router = useRouter();
+  const navigate = (path: string) => router.push(path);
   const [showAddFlow, setShowAddFlow] = useState(false);
   const [selectedInvestment, setSelectedInvestment] = useState<Investment | null>(null);
   const [showProductSelector, setShowProductSelector] = useState(false);

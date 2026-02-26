@@ -1,10 +1,11 @@
+"use client";
+
 import { User, Shield, Bell, Globe, ChevronRight } from "lucide-react";
 
-interface SettingsPageProps {
-    onLogout: () => void;
-}
+import { useAuth } from "../../../context/AuthContext";
 
-export function SettingsPage({ onLogout }: SettingsPageProps) {
+export default function SettingsPage() {
+    const { logout } = useAuth();
     const sections = [
         {
             title: "Cuenta",
@@ -56,7 +57,7 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
                     <h2 className="text-xl font-bold text-red-600">Zona de peligro</h2>
                     <div className="bg-white rounded-2xl border border-red-100 shadow-sm overflow-hidden">
                         <button
-                            onClick={onLogout}
+                            onClick={logout}
                             className="w-full flex items-center gap-4 p-4 hover:bg-red-50 transition-colors text-left group"
                         >
                             <div className="flex-1">

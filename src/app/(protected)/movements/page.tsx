@@ -1,3 +1,5 @@
+"use client";
+
 import { ArrowDownLeft, ArrowUpRight, Search, Filter } from "lucide-react";
 import { useState } from "react";
 
@@ -11,7 +13,7 @@ interface Movement {
   status: "completed" | "pending" | "failed";
 }
 
-export function MovementsPage() {
+export default function MovementsPage() {
   const [filter, setFilter] = useState("all");
 
   const movements: Movement[] = [
@@ -90,9 +92,9 @@ export function MovementsPage() {
         <div className="flex items-center gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Buscar movimientos..." 
+            <input
+              type="text"
+              placeholder="Buscar movimientos..."
               className="pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#3246ff]/20 w-64"
             />
           </div>
@@ -114,21 +116,19 @@ export function MovementsPage() {
           {movements.map((movement) => (
             <div key={movement.id} className="grid grid-cols-[auto_1fr_auto] gap-4 p-4 hover:bg-gray-50 transition-colors items-center">
               <div className="w-12 flex justify-center">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  movement.amount > 0 ? 'bg-green-100' : 'bg-gray-100'
-                }`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${movement.amount > 0 ? 'bg-green-100' : 'bg-gray-100'
+                  }`}>
                   {getIcon(movement.type)}
                 </div>
               </div>
-              
+
               <div>
                 <div className="font-semibold text-gray-900">{movement.description}</div>
                 <div className="text-sm text-gray-500">{movement.date}</div>
               </div>
 
-              <div className={`text-right font-medium ${
-                movement.amount > 0 ? 'text-green-600' : 'text-gray-900'
-              }`}>
+              <div className={`text-right font-medium ${movement.amount > 0 ? 'text-green-600' : 'text-gray-900'
+                }`}>
                 {formatAmount(movement.amount, movement.currency)}
               </div>
             </div>
@@ -136,11 +136,11 @@ export function MovementsPage() {
         </div>
       </div>
 
-       <div className="text-center">
-          <button className="text-[#3246ff] font-semibold text-sm hover:underline">
-            Ver más movimientos antiguos
-          </button>
-       </div>
+      <div className="text-center">
+        <button className="text-[#3246ff] font-semibold text-sm hover:underline">
+          Ver más movimientos antiguos
+        </button>
+      </div>
     </div>
   );
 }

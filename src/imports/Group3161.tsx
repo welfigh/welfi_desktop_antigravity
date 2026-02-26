@@ -5,7 +5,7 @@ function Background() {
   return (
     <div className="-translate-x-1/2 -translate-y-1/2 absolute h-[844px] left-1/2 top-1/2 w-[390px]" data-name="Background">
       <div className="absolute inset-[-0.19%_-0.34%_-0.25%_0] rounded-[29px]" data-name="7 16">
-        <img alt="" className="absolute inset-0 max-w-none object-cover pointer-events-none rounded-[29px] size-full" src={img716} />
+        <img alt="" className="absolute inset-0 max-w-none object-cover pointer-events-none rounded-[29px] size-full" src={img716.src} />
       </div>
     </div>
   );

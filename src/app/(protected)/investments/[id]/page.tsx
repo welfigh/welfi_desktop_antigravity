@@ -1,7 +1,9 @@
+"use client";
+
 import { ArrowLeft, TrendingUp, Calendar, Clock, Info, Pencil, PieChart as PieChartIcon } from "lucide-react";
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { allInvestments } from "../constants/mockData";
+import { useParams, useRouter } from "next/navigation";
+import { allInvestments } from "../../../../constants/mockData";
 import {
   LineChart,
   Line,
@@ -15,14 +17,19 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-import { WithdrawFromInvestmentFlow } from "../components/WithdrawFromInvestmentFlow";
-import { AddToInvestmentFlow } from "../components/AddToInvestmentFlow";
-import { AdvisorModule } from "../components/AdvisorModule";
-import { CURRENT_USER_TIER } from "../constants/tierConfig";
+import { WithdrawFromInvestmentFlow } from "../../../../components/WithdrawFromInvestmentFlow";
+import { AddToInvestmentFlow } from "../../../../components/AddToInvestmentFlow";
+import { AdvisorModule } from "../../../../components/AdvisorModule";
+import { CURRENT_USER_TIER } from "../../../../constants/tierConfig";
 
-export function InvestmentDetailPage() {
-  const { id } = useParams();
-  const navigate = useNavigate();
+export default function InvestmentDetailPage() {
+  const params = useParams();
+  const id = params?.id as string;
+  const router = useRouter();
+  const navigate = (path: string | number) => {
+    if (typeof path === 'number') router.back();
+    else router.push(path);
+  };
   const investment = allInvestments.find((inv) => inv.id === id);
 
   if (!investment) {

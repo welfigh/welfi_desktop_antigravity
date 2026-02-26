@@ -450,7 +450,7 @@ export function AddToInvestmentFlow({ onClose, investment, availableBalance }: A
             </button>
             {/* Rocket illustration */}
             <div className="mb-6 flex justify-center">
-              <img src={rocketImage} alt="Rocket" className="w-64 h-64 object-contain" />
+              <img src={rocketImage.src} alt="Rocket" className="w-64 h-64 object-contain" />
             </div>
             {/* Title with underline */}
             <div className="mb-6">

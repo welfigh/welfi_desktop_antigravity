@@ -1,5 +1,8 @@
+"use client";
+
 import { Home, TrendingUp, Settings, HelpCircle, LogOut, BarChart3, Lock, MessageCircle, Video, Phone, Sparkles, Crown } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { CURRENT_USER_TIER, advisorInfo, tierConfigs } from "../../constants/tierConfig";
@@ -164,6 +167,7 @@ function SidebarAdvisor({ tier }: { tier: WelfiTier }) {
 }
 
 export function Sidebar() {
+  const pathname = usePathname();
   const navItems = [
     { to: "/", label: "Inicio", icon: Home },
     { to: "/investments", label: "Todas mis inversiones", icon: TrendingUp },
@@ -184,22 +188,23 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 p-3">
         <ul className="space-y-1">
-          {navItems.map((item) => (
-            <li key={item.label}>
-              <NavLink
-                to={item.to}
-                className={({ isActive }) =>
-                  `w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all ${isActive
+          {navItems.map((item) => {
+            const isActive = pathname ? (pathname === item.to || (item.to !== "/" && pathname.startsWith(item.to))) : false;
+            return (
+              <li key={item.label}>
+                <Link
+                  href={item.to}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all ${isActive
                     ? "bg-gradient-to-r from-[#3246ff] to-[#4856ff] text-white shadow-md"
                     : "text-gray-600 hover:bg-gray-100"
-                  }`
-                }
-              >
-                <item.icon className="size-4" />
-                <span className="font-medium text-sm">{item.label}</span>
-              </NavLink>
-            </li>
-          ))}
+                    }`}
+                >
+                  <item.icon className="size-4" />
+                  <span className="font-medium text-sm">{item.label}</span>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
 
         {/* Dólar MEP button */}

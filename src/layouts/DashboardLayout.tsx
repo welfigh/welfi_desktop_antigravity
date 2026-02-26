@@ -1,5 +1,7 @@
+"use client";
+
 import { useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { usePathname } from "next/navigation";
 import { Menu, Bell, Settings } from "lucide-react";
 import { Sidebar } from "../components/layout/Sidebar";
 import headerBg from "../assets/72384e84861ccea0025a5cb04af72b6dbb5d53f9.png";
@@ -7,12 +9,12 @@ import headerBg from "../assets/72384e84861ccea0025a5cb04af72b6dbb5d53f9.png";
 // Helper type for page (can be refined)
 type PageType = "home" | "stats" | "investments" | "movements" | "settings";
 
-export default function DashboardLayout() {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Default open on desktop?
-    const location = useLocation();
+    const pathname = usePathname();
 
     // Check if we are on the dashboard (home) page to style header differently
-    const isDashboard = location.pathname === '/' || location.pathname === '/dashboard';
+    const isDashboard = pathname === '/' || pathname === '/dashboard';
 
     // Header background classes: transparent for dashboard (to blend with page bg), gradient for others
     const headerClasses = isDashboard
@@ -33,7 +35,7 @@ export default function DashboardLayout() {
                         <>
                             <div className="absolute inset-0 opacity-20">
                                 <img
-                                    src={headerBg}
+                                    src={headerBg.src}
                                     alt=""
                                     className="w-full h-full object-cover mix-blend-overlay"
                                 />
@@ -74,7 +76,7 @@ export default function DashboardLayout() {
 
                 {/* Scrollable Content Area */}
                 <main className="flex-1 w-full overflow-y-auto">
-                    <Outlet />
+                    {children}
                 </main>
             </div>
         </div>
