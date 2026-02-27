@@ -10,15 +10,18 @@ export default function ProtectedLayout({
 }: {
     children: React.ReactNode;
 }) {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
-        if (!isAuthenticated) {
+        // Only redirect once we know the auth state (session restore complete)
+        if (!isLoading && !isAuthenticated) {
             router.push("/login");
         }
-    }, [isAuthenticated, router]);
+    }, [isAuthenticated, isLoading, router]);
 
+    // Show nothing while restoring session from storage
+    if (isLoading) return null;
     if (!isAuthenticated) return null;
 
     return <DashboardLayout>{children}</DashboardLayout>;
