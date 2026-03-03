@@ -35,6 +35,12 @@ export interface PanelData {
     daily_performance_pesos: number;
     /** Rendimiento mensual en pesos */
     monthly_performance_pesos: number;
+    /** Rendimiento histórico en pesos */
+    historic_performance_pesos: number;
+    /** Rendimiento general (%) */
+    general_performance: number;
+    /** Rendimiento general en pesos (%) */
+    general_performance_pesos: number;
     /** ARS disponibles para operar */
     available_in_pesos: number;
     /** USD disponibles para operar */
@@ -48,12 +54,18 @@ export interface PanelData {
     /** Tenencias Welfi Pesos */
     welfi_pesos_holdings: number;
     welfi_pesos_performance: number;
+    /** Tenencias Welfi Dólares */
+    welfi_dolares_holdings: number;
+    welfi_dolares_performance: number;
+    welfi_dolares_pending: number;
     /** Tenencias Objetivos/Estrategias */
     goals_holdings: number;
     goals_performance: number;
+    goals_performance_pesos: number;
     /** Tenencias Packs */
     packs_holdings: number;
     packs_performance: number;
+    packs_performance_pesos: number;
     /** Estado del cliente */
     customer_status: string;
     client_account_available: boolean;

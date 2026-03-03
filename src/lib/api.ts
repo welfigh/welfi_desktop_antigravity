@@ -15,7 +15,7 @@ export function getSessionToken(): string | null {
 function createClient(baseURL: string): AxiosInstance {
     const instance = axios.create({
         baseURL,
-        timeout: 15000,
+        timeout: 60000,
         headers: { "Content-Type": "application/json" },
     });
 
@@ -26,12 +26,18 @@ function createClient(baseURL: string): AxiosInstance {
         return config;
     });
 
-    // On 401 → dispatch logout event (AuthContext listens)
+    // On 401 → dispatch logout event (AuthContext listens).
+    // Exceptions: non-critical endpoints in SKIP_LOGOUT_URLS won't log the user out.
+    const SKIP_LOGOUT_URLS = ["/customer/historical_portfolio"];
     instance.interceptors.response.use(
         (res) => res,
         (err) => {
             if (err.response?.status === 401 && typeof window !== "undefined") {
-                window.dispatchEvent(new CustomEvent("welfi:unauthorized"));
+                const url: string = err.config?.url ?? "";
+                const skip = SKIP_LOGOUT_URLS.some((u) => url.includes(u));
+                if (!skip) {
+                    window.dispatchEvent(new CustomEvent("welfi:unauthorized"));
+                }
             }
             return Promise.reject(err);
         }

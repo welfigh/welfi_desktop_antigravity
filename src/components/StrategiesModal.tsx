@@ -3,6 +3,7 @@
 import { X, TrendingUp, Filter, Info, ChevronRight, Shield, Zap, Target, Banknote } from "lucide-react";
 import { useState } from "react";
 import { StrategyDetail } from "./StrategyDetail";
+import { StrategyConfirmation } from "./StrategyConfirmation";
 
 interface StrategiesPageProps {
     onClose: () => void;
@@ -12,6 +13,7 @@ interface StrategiesPageProps {
 export default function StrategiesPage({ onClose, onSelectStrategy }: StrategiesPageProps) {
     const [filter, setFilter] = useState<"todos" | "conservador" | "moderado" | "arriesgado">("todos");
     const [selectedStrategy, setSelectedStrategy] = useState<string | null>(null);
+    const [confirmationData, setConfirmationData] = useState<{ amount: string, goalName: string } | null>(null);
 
     const allStrategies = [
         {
@@ -82,11 +84,22 @@ export default function StrategiesPage({ onClose, onSelectStrategy }: Strategies
         return (
             <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
                 <div className="bg-[#f8f9fc] rounded-[2rem] shadow-2xl w-full max-w-6xl h-[90vh] overflow-hidden flex flex-col relative border border-white/50">
-                    <StrategyDetail
-                        strategy={strategyData}
-                        onBack={() => setSelectedStrategy(null)}
-                        onConfirmSelection={(id) => onSelectStrategy(id)}
-                    />
+                    {confirmationData ? (
+                        <StrategyConfirmation
+                            strategy={strategyData}
+                            amount={confirmationData.amount}
+                            goalName={confirmationData.goalName}
+                            onBack={() => setConfirmationData(null)}
+                            onClose={onClose}
+                            onSuccess={() => { setConfirmationData(null); onSelectStrategy(strategyData.id); }}
+                        />
+                    ) : (
+                        <StrategyDetail
+                            strategy={strategyData}
+                            onBack={() => setSelectedStrategy(null)}
+                            onConfirmSelection={(id, amount, goalName) => setConfirmationData({ amount, goalName })}
+                        />
+                    )}
                 </div>
             </div>
         );

@@ -27,7 +27,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Sidebar />
 
             {/* Main content */}
-            <div className={`flex-1 flex flex-col min-w-0 relative ${isDashboard ? 'bg-gradient-to-br from-[#3246ff] via-[#4856ff] to-[#3d4eff]' : ''}`}>
+            <div className="flex-1 flex flex-col min-w-0 relative bg-[#f5f5f7]">
                 {/* Header */}
                 <header className={headerClasses}>
                     {/* Background pattern & orbs - hidden on dashboard where header is transparent */}
@@ -47,26 +47,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
                     {/* Header content */}
                     <div className="relative z-10 w-full py-3 lg:py-3">
-                        <div className="px-4 sm:px-6 lg:px-6">
+                        <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-6">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4">
                                     <button
-                                        className="lg:hidden backdrop-blur-md bg-white/20 hover:bg-white/30 rounded-2xl p-2.5 transition-all"
+                                        className={`lg:hidden rounded-2xl p-2.5 transition-all ${isDashboard ? "hover:bg-black/5 text-gray-800" : "backdrop-blur-md bg-white/20 hover:bg-white/30 text-white"
+                                            }`}
                                         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                                     >
-                                        <Menu className="size-5 text-white" />
+                                        <Menu className="size-5" />
                                     </button>
-                                    <h1 className="text-white text-base lg:text-lg font-semibold truncate">Hola, Fran 👋</h1>
+                                    <h1 className={`text-base lg:text-[19px] font-bold tracking-tight truncate ${isDashboard ? "text-gray-900" : "text-white"}`}>
+                                        Hola, Fran <span className="text-xl">👋</span>
+                                    </h1>
                                 </div>
 
                                 <div className="flex items-center gap-3">
-
-                                    <button className="backdrop-blur-md bg-white/20 hover:bg-white/30 rounded-xl p-2 transition-all relative">
-                                        <Bell className="size-4 text-white" />
-                                        <div className="absolute -top-1 -right-1 bg-[#e5582f] rounded-full w-2 h-2" />
+                                    <button className={`rounded-xl p-2.5 transition-all relative ${isDashboard ? "hover:bg-black/5 text-gray-600" : "backdrop-blur-md bg-white/20 hover:bg-white/30 text-white"
+                                        }`}>
+                                        <Bell className="size-5" />
+                                        <div className="absolute top-2 right-2.5 bg-[#e5582f] rounded-full w-2 h-2 border border-[#f5f5f7]" />
                                     </button>
-                                    <button className="backdrop-blur-md bg-white/20 hover:bg-white/30 rounded-xl p-2 transition-all">
-                                        <Settings className="size-4 text-white" />
+                                    <button className={`rounded-xl p-2.5 transition-all ${isDashboard ? "hover:bg-black/5 text-gray-600" : "backdrop-blur-md bg-white/20 hover:bg-white/30 text-white"
+                                        }`}>
+                                        <Settings className="size-5" />
                                     </button>
                                 </div>
                             </div>

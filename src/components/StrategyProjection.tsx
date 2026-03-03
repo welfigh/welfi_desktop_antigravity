@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ArrowLeft, TrendingUp, DollarSign, Calendar, Check, Info } from "lucide-react";
+import { ArrowLeft, TrendingUp, DollarSign, Calendar, Check, Info, ArrowRight } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 
 interface Strategy {
@@ -16,10 +16,10 @@ interface Strategy {
 interface StrategyProjectionProps {
     strategy: Strategy;
     onBack: () => void;
-    onCreate: (amount: string, goalName: string) => void;
+    onContinue: (amount: string, goalName: string) => void;
 }
 
-export function StrategyProjection({ strategy, onBack, onCreate }: StrategyProjectionProps) {
+export function StrategyProjection({ strategy, onBack, onContinue }: StrategyProjectionProps) {
     const [amount, setAmount] = useState("100000");
     const [monthlyContribution, setMonthlyContribution] = useState("20000");
     const [goalName, setGoalName] = useState(strategy.title);
@@ -210,10 +210,10 @@ export function StrategyProjection({ strategy, onBack, onCreate }: StrategyProje
 
                             <div className="mt-8 flex justify-end">
                                 <button
-                                    onClick={() => onCreate(amount, goalName)}
+                                    onClick={() => onContinue(amount, goalName)}
                                     className={`px-8 py-4 bg-gradient-to-r ${strategy.color} text-white rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center gap-2`}
                                 >
-                                    Confirmar y Crear Objetivo <Check className="size-6" />
+                                    Continuar <ArrowRight className="size-6" />
                                 </button>
                             </div>
                         </div>

@@ -1,24 +1,26 @@
 /** @type {import('next').NextConfig} */
+const API_BASE = process.env.API_BASE ?? "https://api.welfi.ar";
+
 const nextConfig = {
     output: 'standalone',
 
     // ── API Proxies (bypass CORS in dev, same-domain routing in prod) ─────────
     async rewrites() {
         return [
-            // Auth microservice: /auth/*, /user/*
+            // Auth microservice
             {
                 source: '/api/welfi/:path*',
-                destination: 'https://api.welfi.ar/microservice-auth/api/v01/:path*',
+                destination: `${API_BASE}/microservice-auth/api/v01/:path*`,
             },
-            // Products microservice: /portfolios, /objectives, /welfi_pesos, etc.
+            // Products microservice
             {
                 source: '/api/products/:path*',
-                destination: 'https://api.welfi.ar/products-microservice/api/v01/:path*',
+                destination: `${API_BASE}/products-microservice/api/v01/:path*`,
             },
-            // Engine microservice: /get_panel_for_profile, /get_available_profile, etc.
+            // Engine microservice
             {
                 source: '/api/engine/:path*',
-                destination: 'https://api.welfi.ar/welfi-engine/api/v01/:path*',
+                destination: `${API_BASE}/welfi-engine/api/v01/:path*`,
             },
         ];
     },

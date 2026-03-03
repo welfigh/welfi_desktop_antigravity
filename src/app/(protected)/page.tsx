@@ -6,6 +6,7 @@ import { BalanceCard } from "../../components/BalanceCard";
 import { InvestmentCard } from "../../components/InvestmentCard";
 import { ActionButton } from "../../components/ActionButton";
 import { NewsCard } from "../../components/NewsCard";
+import { AlertCircle } from "lucide-react";
 import { TotalBalanceChart } from "../../components/TotalBalanceChart";
 import { InvestmentSelectionModal } from "../../components/InvestmentSelectionModal";
 import { AddToInvestmentFlow } from "../../components/AddToInvestmentFlow";
@@ -138,24 +139,55 @@ export default function DashboardPage() {
         ? balanceUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
         : balanceARS.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    // Rendimiento diario — viene en USD absoluto (no porcentaje)
-    const dailyPerfUSD = panel?.daily_performance ?? 0;
-    const dailyPerfARS = panel?.daily_performance_pesos ?? 0;
-    const dailyPerfDisplay = currency === "USD"
-        ? `${dailyPerfUSD >= 0 ? "+" : ""}${dailyPerfUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`
-        : `${dailyPerfARS >= 0 ? "+" : ""}${dailyPerfARS.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ARS`;
-    const isDailyPositive = dailyPerfUSD >= 0;
+    // Rendimiento diario (Porcentaje)
+    // El JSON trae el % diario en general_performance (ya viene como %, no multiplicar por 100)
+    const dailyPerfPctUSD = panel?.general_performance ?? 0;
+    const dailyPerfPctARS = panel?.general_performance_pesos ?? 0;
 
-    // Welfi Pesos (tenencias del panel)
+    const dailyPerfDisplay = currency === "USD"
+        ? `${dailyPerfPctUSD >= 0 ? "+" : ""}${dailyPerfPctUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`
+        : `${dailyPerfPctARS >= 0 ? "+" : ""}${dailyPerfPctARS.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+    const isDailyPositive = currency === "USD" ? dailyPerfPctUSD >= 0 : dailyPerfPctARS >= 0;
+
+    // Variación en pesos/dólares (monto absoluto diario)
+    const dailyPerfAmtUSD = balanceUSD * (dailyPerfPctUSD / 100);
+    const dailyPerfAmtARS = balanceARS * (dailyPerfPctARS / 100);
+    const dailyPerfAmtDisplay = currency === "USD"
+        ? `${dailyPerfAmtUSD >= 0 ? "+" : ""}USD ${dailyPerfAmtUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : `${dailyPerfAmtARS >= 0 ? "+" : ""}ARS ${dailyPerfAmtARS.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    // Welfi Pesos (tenencias y rendimiento)
     const welfiPesosTotalARS = panel?.welfi_pesos_holdings ?? 0;
     const welfiPesosDisplayAmount = currency === "USD"
         ? `$ ${(welfiPesosTotalARS / dollarValue).toLocaleString("en-US", { minimumFractionDigits: 2 })}`
         : `$ ${welfiPesosTotalARS.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`;
-    const welfiPesosTNAStr = "—"; // se puede obtener de products/welfi_pesos en el futuro
+    // Ya viene como porcentaje
+    const welfiPesosPerfPct = panel?.welfi_pesos_performance ?? 0;
+    const welfiPesosTNAStr = `${welfiPesosPerfPct > 0 ? "+" : ""}${welfiPesosPerfPct.toFixed(2)}%`;
+    const isWelfiPesosPositive = welfiPesosPerfPct >= 0;
 
-    // Packs & estrategias del panel (globales, para el BalanceCard)
+    // Welfi Dólares (tenencias y rendimiento)
+    const welfiDolaresPerfPct = panel?.welfi_dolares_performance ?? 0;
+    const welfiDolaresPerfDisplay = `${welfiDolaresPerfPct > 0 ? "+" : ""}${welfiDolaresPerfPct.toFixed(2)}%`;
+    const isWelfiDolaresPositive = welfiDolaresPerfPct >= 0;
+
+    // Packs & estrategias del panel (globales y rendimiento)
     const packsTotal = panel?.packs_holdings ?? 0;
     const goalsTotal = panel?.goals_holdings ?? 0;
+
+    const packsPerfUSD = panel?.packs_performance ?? 0;
+    const packsPerfARS = panel?.packs_performance_pesos ?? 0;
+    const packsPerfDisplay = currency === "USD"
+        ? `${packsPerfUSD >= 0 ? "+" : ""}${packsPerfUSD.toFixed(2)}%`
+        : `${packsPerfARS >= 0 ? "+" : ""}${packsPerfARS.toFixed(2)}%`;
+    const isPacksPositive = currency === "USD" ? packsPerfUSD >= 0 : packsPerfARS >= 0;
+
+    const goalsPerfUSD = panel?.goals_performance ?? 0;
+    const goalsPerfARS = panel?.goals_performance_pesos ?? 0;
+    const goalsPerfDisplay = currency === "USD"
+        ? `${goalsPerfUSD >= 0 ? "+" : ""}${goalsPerfUSD.toFixed(2)}%`
+        : `${goalsPerfARS >= 0 ? "+" : ""}${goalsPerfARS.toFixed(2)}%`;
+    const isGoalsPositive = currency === "USD" ? goalsPerfUSD >= 0 : goalsPerfARS >= 0;
 
     // Disponible para operar
     const availableARS = panel?.available_in_pesos ?? 0;
@@ -212,90 +244,162 @@ export default function DashboardPage() {
 
     // ── Modal screens ─────────────────────────────────────────────────────────
     if (showStrategiesPage) {
-        return <StrategiesPage onClose={() => setShowStrategiesPage(false)} onSelectStrategy={(id) => alert("WIP: " + id)} />;
+        return <StrategiesPage onClose={() => setShowStrategiesPage(false)} onSelectStrategy={(id) => setShowStrategiesPage(false)} />;
     }
     if (showThematicPacksFlow) {
         return <ThematicPacksPage availableBalance={availableBalanceForModal} onBack={() => setShowThematicPacksFlow(false)} />;
     }
 
+    // ── Check Customer Status ───────────────────────────────────────────────
+    // Si ya cargaron los datos y NO es Cliente Activo, mostramos pantalla bloqueada
+    if (!dataLoading && panel && panel.customer_status !== "Cliente Activo") {
+        return (
+            <div className="w-full h-full flex items-center justify-center p-6 bg-gray-50">
+                <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 text-center space-y-6">
+                    <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <AlertCircle className="size-8" />
+                    </div>
+                    <h2 className="text-2xl font-black text-gray-900">Tu cuenta no está activa</h2>
+                    <p className="text-gray-500 text-sm leading-relaxed">
+                        Parece que tu cuenta (Estado: <span className="font-semibold text-gray-700">{panel.customer_status}</span>) actualmente no está habilitada para operar.
+                    </p>
+                    <div className="pt-4">
+                        <button
+                            onClick={() => window.open("https://api.whatsapp.com/send/?phone=5491136979606", "_blank")}
+                            className="w-full py-3 px-4 bg-[#3246ff] hover:bg-[#2031d4] text-white rounded-xl font-bold transition-colors"
+                        >
+                            Contactar a Soporte
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     // ── Render ────────────────────────────────────────────────────────────────
     return (
-        <div className="w-full flex flex-col min-h-full">
-            {/* Top Section */}
-            <div className="w-full bg-transparent relative overflow-hidden pb-6 pt-3 px-4 lg:px-6">
-                <div className="relative z-10">
-                    <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-5">
-                        <div className="flex flex-col h-full justify-between">
-                            <div className="flex flex-col gap-3">
-                                <div className="flex items-center gap-2 text-white">
-                                    <span className="text-sm font-medium">Todo mi dinero</span>
-                                    <TierBadge tier={CURRENT_USER_TIER} />
-                                </div>
+        <div className="w-full flex flex-col min-h-full bg-[#f5f5f7]">
 
-                                {dataLoading ? (
-                                    <SkeletonBalance />
-                                ) : (
-                                    <BalanceCard
-                                        balance={totalBalance}
-                                        currency={currency}
-                                        returnRate="0.0%"
-                                        isPositive={true}
-                                        onCurrencyChange={toggleCurrency}
-                                    />
-                                )}
+            {/* ─── Revolut-style Hero Section ────────────────────────── */}
+            <div className="px-4 lg:px-6 pt-4 pb-2 w-full max-w-[1400px] mx-auto">
+                <div className="flex flex-col xl:flex-row gap-4">
 
-                                {/* Balance breakdown */}
-                                <div className="space-y-1 text-white text-[11px]">
-                                    {dataLoading ? (
-                                        <div className="space-y-1.5">
-                                            {[...Array(4)].map((_, i) => (
-                                                <div key={i} className="h-3 bg-white/20 rounded animate-pulse" />
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className="flex items-center justify-between">
-                                                <span className="opacity-90">ARS disponibles para operar o retirar:</span>
-                                                <span className="font-medium text-white">
-                                                    $ {availableARS.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="opacity-90">USD disponibles para operar o retirar:</span>
-                                                <span className="font-medium text-white">
-                                                    $ {availableUSD.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="opacity-90">ARS en proceso de acreditación:</span>
-                                                <span className="font-medium text-white">$ 0,00</span>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="opacity-90">USD en proceso de acreditación:</span>
-                                                <span className="font-medium text-white">$ 0,00</span>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
+                    {/* ── Module 1: Balance & Actions ── */}
+                    <div className="bg-white border border-gray-200 shadow-sm rounded-[20px] p-6 lg:p-8 flex flex-col justify-between xl:w-[480px] shrink-0 relative overflow-hidden group">
+
+                        {/* Top info and toggle */}
+                        <div className="flex items-center justify-between mb-8 z-10">
+                            <div className="flex items-center gap-2">
+                                <span className="text-gray-500 text-[13px] font-medium tracking-wide">
+                                    Balance Total
+                                </span>
+                                <TierBadge tier={CURRENT_USER_TIER} />
                             </div>
-
-                            {/* Action buttons */}
-                            <div className="flex gap-2">
-                                <ActionButton onClick={() => alert("Ingresar dinero WIP")}>💰 Ingresar dinero</ActionButton>
-                                <ActionButton onClick={() => alert("Retirar dinero WIP")}>💸 Retirar dinero</ActionButton>
-                            </div>
+                            {!dataLoading && (
+                                <button
+                                    onClick={toggleCurrency}
+                                    className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-full border border-gray-200"
+                                    style={{ fontSize: 13, fontWeight: 500 }}
+                                >
+                                    <span>{currency === "USD" ? "🇺🇸 USD" : "🇦🇷 ARS"}</span>
+                                    <svg width="8" height="8" viewBox="0 0 12 12" fill="none" className="opacity-70">
+                                        <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </button>
+                            )}
                         </div>
 
-                        {/* Right: Historical Chart */}
-                        <div className="w-full h-full min-h-[220px]">
-                            <TotalBalanceChart currency={currency} />
+                        {/* Balance Amount */}
+                        <div className="z-10 mb-8">
+                            {dataLoading ? (
+                                <div className="space-y-3">
+                                    <div className="h-12 w-3/4 bg-gray-200 rounded-lg animate-pulse" />
+                                    <div className="h-5 w-1/2 bg-gray-100 rounded animate-pulse" />
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="text-gray-900 font-medium text-2xl leading-none select-none tracking-tight">
+                                            {currency === "USD" ? "U$S" : "$"}
+                                        </span>
+                                        <p
+                                            className="text-gray-900 font-semibold leading-none"
+                                            style={{
+                                                fontSize: "clamp(36px, 4vw, 44px)",
+                                                letterSpacing: "-1px",
+                                                fontVariantNumeric: "tabular-nums",
+                                            }}
+                                        >
+                                            {totalBalance}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center flex-wrap gap-2.5 mt-2">
+                                        <span className={`text-[13px] font-medium flex items-center gap-1 ${isDailyPositive ? "text-emerald-600" : "text-gray-500"}`}>
+                                            {isDailyPositive ? (
+                                                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 10L6 2M6 2L2 6M6 2L10 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                            ) : (
+                                                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 2L6 10M6 10L2 6M6 10L10 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                            )}
+                                            {dailyPerfAmtDisplay}
+                                        </span>
+                                        <span className="text-gray-400 text-[13px] font-medium">
+                                            {dailyPerfDisplay} hoy
+                                        </span>
+                                    </div>
+
+                                    {/* Availability */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-8 pt-6 border-t border-gray-100">
+                                        <div className="flex-1 flex flex-col gap-1">
+                                            <span className="text-[12px] text-gray-500 font-medium">ARS disp.</span>
+                                            <div className="text-gray-900 font-medium text-[15px] tabular-nums">
+                                                $ {availableARS.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                                            </div>
+                                        </div>
+                                        <div className="hidden sm:block w-[1px] h-8 bg-gray-200" />
+                                        <div className="flex-1 flex flex-col gap-1">
+                                            <span className="text-[12px] text-gray-500 font-medium">USD disp.</span>
+                                            <div className="text-gray-900 font-medium text-[15px] tabular-nums">
+                                                $ {availableUSD.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-2.5 z-10 pt-6">
+                            {[
+                                { label: "Ingresar", icon: "↓", onClick: () => alert("Ingresar dinero WIP"), primary: true },
+                                { label: "Retirar", icon: "↑", onClick: () => alert("Retirar dinero WIP") },
+                                { label: "Invertir", icon: "+", onClick: () => setShowProductSelector(true) },
+                            ].map(({ label, icon, onClick, primary }) => (
+                                <button
+                                    key={label}
+                                    onClick={onClick}
+                                    className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 py-2.5 rounded-xl transition-all duration-200 font-medium tracking-wide text-[13px] ${primary
+                                        ? "bg-[#3246ff] text-white hover:bg-[#2031d4] shadow-sm"
+                                        : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300 shadow-sm"
+                                        }`}
+                                >
+                                    <span>{icon}</span>
+                                    <span>{label}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* ── Module 2: Evolution Chart ── */}
+                    <div className="bg-white border border-gray-200 shadow-sm rounded-[20px] p-6 lg:p-8 flex-1 min-w-0 flex flex-col min-h-[300px] xl:min-h-[360px] relative overflow-hidden">
+                        <div className="relative z-10 w-full h-full min-h-[260px]">
+                            <TotalBalanceChart currency={currency} dollarValue={dollarValue} />
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* Content Section */}
-            <div className="w-full px-4 lg:px-6 py-4 bg-gray-50 flex-1">
+            <div className="w-full max-w-[1400px] mx-auto px-4 lg:px-6 py-4 flex-1">
                 <div className="space-y-4">
 
                     {/* Error banner */}
@@ -312,22 +416,11 @@ export default function DashboardPage() {
                     )}
 
                     <div className="space-y-3">
-                        {/* Headers */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-1 h-5 bg-gradient-to-b from-[#3246ff] to-[#4856ff] rounded-full" />
-                                <h2 className="text-gray-900 text-sm font-bold">Corto plazo</h2>
-                                <div className="flex-1 h-px bg-gray-200" />
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <div className="w-1 h-5 bg-gradient-to-b from-[#e5582f] to-[#f06844] rounded-full" />
-                                <h2 className="text-gray-900 text-sm font-bold">Mediano y largo plazo</h2>
-                                <div className="flex-1 h-px bg-gray-200" />
-                            </div>
-                        </div>
+                        {/* Section header */}
+                        <h2 className="text-gray-900 text-sm font-semibold px-0.5">Mis inversiones</h2>
 
                         {/* Cards grid */}
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-3">
+                        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
                             {dataLoading ? (
                                 [...Array(6)].map((_, i) => <SkeletonCard key={i} />)
                             ) : (
@@ -338,9 +431,8 @@ export default function DashboardPage() {
                                         amount={welfiPesosDisplayAmount}
                                         currency={currency}
                                         returnRate={welfiPesosTNAStr}
-                                        objectivesCount={welfiPesosInvestments.length}
-                                        objectivesLabel="inversión"
-                                        onViewAll={() => navigate("/investments")}
+                                        isPositive={isWelfiPesosPositive}
+                                        isEmpty={welfiPesosTotalARS === 0}
                                         onAddMoney={() => handleAddMoneyClick(welfiPesosInvestments, "Welfi Pesos", () => setShowCreateWelfiPesosFlow(true))}
                                         onCreateNew={() => setShowCreateWelfiPesosFlow(true)}
                                     />
@@ -350,8 +442,10 @@ export default function DashboardPage() {
                                         title="Welfi Dólares"
                                         amount={`$ ${availableUSD.toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
                                         currency={currency}
-                                        returnRate="0.9%"
+                                        returnRate={welfiDolaresPerfDisplay}
+                                        isPositive={isWelfiDolaresPositive}
                                         isEmpty={availableUSD === 0}
+                                        onAddMoney={() => alert("Próximamente: Sumar welfi dólares")}
                                         onCreateNew={() => alert("Próximamente: Crear inversión en Welfi Dólares")}
                                     />
 
@@ -363,11 +457,12 @@ export default function DashboardPage() {
                                             : `$ ${goalsTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`
                                         }
                                         currency={currency}
-                                        returnRate="0.9%"
+                                        returnRate={goalsPerfDisplay}
+                                        isPositive={isGoalsPositive}
                                         objectivesCount={investmentStrategies.length}
                                         objectivesLabel="objetivos"
                                         onViewAll={() => navigate("/investments")}
-                                        onAddMoney={() => handleAddMoneyClick(investmentStrategies, "Objetivo", () => setShowStrategiesPage(true))}
+                                        onAddMoney={() => handleAddMoneyClick(investmentStrategies, "Estrategias de Inversión", () => setShowStrategiesPage(true))}
                                         onCreateNew={() => setShowStrategiesPage(true)}
                                     />
 
@@ -379,11 +474,13 @@ export default function DashboardPage() {
                                             : `$ ${packsTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`
                                         }
                                         currency={currency}
-                                        returnRate="2.3%"
+                                        returnRate={packsPerfDisplay}
+                                        isPositive={isPacksPositive}
                                         objectivesCount={thematicPacks.length}
                                         objectivesLabel="packs"
                                         onViewAll={() => navigate("/investments")}
-                                        onAddMoney={() => handleAddMoneyClick(thematicPacks, "Pack")}
+                                        onAddMoney={() => handleAddMoneyClick(thematicPacks, "Packs Temáticos", () => setShowThematicPacksFlow(true))}
+                                        onCreateNew={() => setShowThematicPacksFlow(true)}
                                     />
 
                                     {/* Fondo de Emergencia */}
@@ -413,6 +510,16 @@ export default function DashboardPage() {
                                             onAddMoney={() => handleAddMoneyClick(retirementFunds.map(objectiveToInvestment), "Fondo de retiro")}
                                         />
                                     )}
+                                    {/* Card CTA: Nueva Inversión */}
+                                    <div
+                                        className="rounded-2xl border-2 border-dashed border-[#3246ff]/30 hover:border-[#3246ff]/60 bg-white hover:bg-[#3246ff]/5 transition-all cursor-pointer flex flex-col items-center justify-center gap-2 p-4 min-h-[160px] group"
+                                        onClick={() => setShowProductSelector(true)}
+                                    >
+                                        <div className="w-10 h-10 rounded-full bg-[#3246ff]/10 group-hover:bg-[#3246ff]/20 flex items-center justify-center transition-all">
+                                            <span className="text-[#3246ff] text-xl font-light">+</span>
+                                        </div>
+                                        <p className="text-[#3246ff] text-xs font-medium text-center leading-tight">Nueva inversión</p>
+                                    </div>
                                 </>
                             )}
                         </div>

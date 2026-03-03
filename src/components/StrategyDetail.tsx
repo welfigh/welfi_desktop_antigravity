@@ -17,7 +17,7 @@ interface Strategy {
 interface StrategyDetailProps {
     strategy: Strategy;
     onBack: () => void;
-    onConfirmSelection: (strategyId: string) => void;
+    onConfirmSelection: (strategyId: string, amount: string, goalName: string) => void;
 }
 
 // Mock historical data
@@ -41,7 +41,7 @@ export function StrategyDetail({ strategy, onBack, onConfirmSelection }: Strateg
             <StrategyProjection
                 strategy={strategy}
                 onBack={() => setView("detail")}
-                onCreate={(amount, name) => onConfirmSelection(strategy.id)}
+                onContinue={(amount, name) => onConfirmSelection(strategy.id, amount, name)}
             />
         );
     }
@@ -99,8 +99,8 @@ export function StrategyDetail({ strategy, onBack, onConfirmSelection }: Strateg
                             <button
                                 key={period}
                                 className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${period === '1M'
-                                        ? 'bg-[#3246ff] text-white shadow-md'
-                                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                    ? 'bg-[#3246ff] text-white shadow-md'
+                                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                                     }`}
                             >
                                 {period}
@@ -129,8 +129,8 @@ export function StrategyDetail({ strategy, onBack, onConfirmSelection }: Strateg
                         <button
                             onClick={() => setActiveTab("info")}
                             className={`flex-1 pb-4 text-sm font-bold transition-all border-b-2 ${activeTab === "info"
-                                    ? "border-[#3246ff] text-[#3246ff]"
-                                    : "border-transparent text-gray-400 hover:text-gray-600"
+                                ? "border-[#3246ff] text-[#3246ff]"
+                                : "border-transparent text-gray-400 hover:text-gray-600"
                                 }`}
                         >
                             Información
@@ -138,8 +138,8 @@ export function StrategyDetail({ strategy, onBack, onConfirmSelection }: Strateg
                         <button
                             onClick={() => setActiveTab("composition")}
                             className={`flex-1 pb-4 text-sm font-bold transition-all border-b-2 ${activeTab === "composition"
-                                    ? "border-[#3246ff] text-[#3246ff]"
-                                    : "border-transparent text-gray-400 hover:text-gray-600"
+                                ? "border-[#3246ff] text-[#3246ff]"
+                                : "border-transparent text-gray-400 hover:text-gray-600"
                                 }`}
                         >
                             Composición

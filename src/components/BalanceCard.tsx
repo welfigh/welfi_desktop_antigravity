@@ -16,7 +16,7 @@ export function BalanceCard({ balance, currency, returnRate, isPositive = true, 
   return (
     <div className="flex items-center gap-3">
       <div className="flex items-baseline gap-2">
-        <p className="text-white font-semibold text-3xl md:text-4xl">{balance}</p>
+        <p className="text-white font-semibold text-2xl md:text-3xl leading-tight">{balance}</p>
         <button
           onClick={onCurrencyChange}
           className="flex items-center gap-1.5 text-white/90 hover:text-white transition-all hover:scale-105 active:scale-95"
