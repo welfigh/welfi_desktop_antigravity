@@ -98,21 +98,36 @@ export interface Portfolio {
     [key: string]: unknown;
 }
 
-export interface WelfiPesosPortfolio {
+/** Individual Welfi Pesos / Dólares fund from Products API /objectives?objective_type=FUND */
+export interface WelfiFundObjective {
     id: string;
     name: string;
-    total_value: number;
-    daily_performance: number;
-    [key: string]: unknown;
+    /** Starting/original amount deposited */
+    starting_amount: number;
+    monthly_amount: number;
+    currency_code: "ARS" | "USD";
+    goal_amount: number;
+    icon: string;
+    packets: number;
+    /** Position value in native currency (USD for dólares) */
+    current_position_value: number;
+    /** Position value in ARS */
+    current_position_value_pesos: number;
+    /** Performance in ARS (decimal) */
+    performance_pesos: number;
+    /** Performance in native currency (decimal) */
+    performance: number;
+    objective_configuration_id: string;
+    /** Pending amount in native currency */
+    pending_amount: number;
+    /** Pending amount in ARS */
+    pending_amount_ars: number;
 }
 
-export interface WelfiDollarsPortfolio {
-    id: string;
-    name: string;
-    total_value_usd: number;
-    daily_performance: number;
-    [key: string]: unknown;
-}
+/** @deprecated — use WelfiFundObjective */
+export type WelfiPesosPortfolio = WelfiFundObjective;
+/** @deprecated — use WelfiFundObjective */
+export type WelfiDollarsPortfolio = WelfiFundObjective;
 
 export interface Objective {
     id: string;

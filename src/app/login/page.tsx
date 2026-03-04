@@ -177,6 +177,12 @@ export default function LoginPage() {
                                         autoFocus
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter" && email && !isSubmitting) {
+                                                e.preventDefault();
+                                                handleSendOtp(e as unknown as React.FormEvent);
+                                            }
+                                        }}
                                         placeholder="usuario@welfi.com.ar"
                                         className="w-full pl-9 pr-3 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#3246ff]/20 focus:border-[#3246ff] transition-all"
                                     />

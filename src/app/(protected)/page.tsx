@@ -19,11 +19,11 @@ import { CURRENT_USER_TIER } from "../../constants/tierConfig";
 import type { Investment } from "../../constants/mockData";
 import {
     fetchPanel,
-    fetchObjectives,
+    fetchObjectivesReal,
 } from "../../services/portfolio.service";
 import type {
     PanelData,
-    Objective,
+    TracingObjective,
 } from "../../types/api.types";
 
 // ─── Exchange rate constant (todo: pull from /mep/quote) ─────────────────────
@@ -45,29 +45,16 @@ function SkeletonBalance() {
     );
 }
 
-// ─── Adapter: map API Objective → local Investment interface ─────────────────
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function objectiveToInvestment(obj: Objective): Investment {
-    const o = obj as any; // Objective uses [key: string]: unknown index signature
+// ─── Adapter: map API TracingObjective → local Investment interface ───────────
+function objectiveToInvestment(obj: TracingObjective): Investment {
     return {
-        id: String(o.id ?? ""),
-        emoji: String(o.icon ?? "📊"),
-        name: String(o.name ?? ""),
-        amount: typeof o.current_value === "number"
-            ? o.current_value.toLocaleString("es-AR", { minimumFractionDigits: 2 })
-            : "0,00",
-        currency: String(o.currency_code ?? "ARS"),
-        returnRate: `${o.return_rate ?? 0}%`,
-        isPositive: Boolean(o.is_positive ?? true),
-        progress: typeof o.progress === "number" ? o.progress : undefined,
-        goalAmount: typeof o.goal_amount === "number"
-            ? o.goal_amount.toLocaleString("es-AR", { minimumFractionDigits: 2 })
-            : undefined,
-        monthlyInvestment: typeof o.monthly_amount === "number"
-            ? o.monthly_amount.toLocaleString("es-AR", { minimumFractionDigits: 2 })
-            : undefined,
-        strategyName: o.strategy_name ? String(o.strategy_name) : undefined,
-        packsCount: typeof o.packs_count === "number" ? o.packs_count : undefined,
+        id: obj.id,
+        emoji: obj.icon || "📊",
+        name: obj.title,
+        amount: (obj.current_position_value_pesos ?? 0).toLocaleString("es-AR", { minimumFractionDigits: 2 }),
+        currency: obj.currency_code ?? "ARS",
+        returnRate: `${((obj.performance ?? 0) * 100).toFixed(2)}%`,
+        isPositive: (obj.performance ?? 0) >= 0,
     };
 }
 
@@ -81,7 +68,7 @@ export default function DashboardPage() {
 
     // ── Panel data (single source of truth for totals) ──
     const [panel, setPanel] = useState<PanelData | null>(null);
-    const [objectives, setObjectives] = useState<Objective[]>([]);
+    const [objectives, setObjectives] = useState<TracingObjective[]>([]);
     const [dataLoading, setDataLoading] = useState(true);
     const [dataError, setDataError] = useState<string | null>(null);
 
@@ -105,12 +92,15 @@ export default function DashboardPage() {
             // get_panel_for_profile = single call that returns ALL totals
             const [panelData, objectivesData] = await Promise.all([
                 fetchPanel(),
-                fetchObjectives().catch(() => []),
+                fetchObjectivesReal().catch(() => ({ customs: [], recommended: [] })),
             ]);
             setPanel(panelData);
-            setObjectives(Array.isArray(objectivesData) ? objectivesData : []);
-            // DEBUG: inspect raw objectives from API
-            console.log("[DEBUG] Raw objectives:", JSON.stringify(objectivesData, null, 2));
+            const allObjs = [
+                ...(objectivesData?.customs ?? []),
+                ...(objectivesData?.recommended ?? []),
+            ];
+            setObjectives(allObjs);
+            console.log("[DEBUG] Raw objectives:", JSON.stringify(allObjs, null, 2));
         } catch (err) {
             console.error("Dashboard load error:", err);
             setDataError("No pudimos cargar tus datos. Verificá tu conexión.");
@@ -213,8 +203,7 @@ export default function DashboardPage() {
     };
 
     // Objectives split by type (para los cards de inversión)
-    // API returns `objective_type`, interface has `type` — check both
-    const getObjType = (o: Objective) => o.objective_type ?? o.type ?? "";
+    const getObjType = (o: TracingObjective) => o.objective_type || "";
     const strategies = objectives.filter((o) => getObjType(o) === "INVESTMENT");
     const packs = objectives.filter((o) => getObjType(o) === "PACK");
     const emergencyFunds = objectives.filter((o) => getObjType(o) === "EMERGENCY");
@@ -495,17 +484,26 @@ export default function DashboardPage() {
 
                                     {/* Fondo de Emergencia */}
                                     {(() => {
-                                        const emergencyTotalUSD = emergencyFunds.reduce((s, o) => s + Number((o as any).current_position_value ?? 0), 0);
-                                        const emergencyTotalARS = emergencyFunds.reduce((s, o) => s + Number((o as any).current_position_value_pesos ?? 0), 0);
+                                        const emergencyTotalUSD = emergencyFunds.reduce((s, o) => s + (o.current_position_value ?? 0), 0);
+                                        const emergencyTotalARS = emergencyFunds.reduce((s, o) => s + (o.current_position_value_pesos ?? 0), 0);
                                         const emergencyAmount = currency === "USD"
                                             ? `$ ${emergencyTotalUSD.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
                                             : `$ ${emergencyTotalARS.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`;
+                                        const emergencyPerfUSD = emergencyFunds.length > 0
+                                            ? emergencyFunds.reduce((s, o) => s + (o.performance ?? 0), 0) / emergencyFunds.length
+                                            : 0;
+                                        const emergencyPerfARS = emergencyFunds.length > 0
+                                            ? emergencyFunds.reduce((s, o) => s + (o.performance_pesos ?? 0), 0) / emergencyFunds.length
+                                            : 0;
+                                        const emergencyPerf = currency === "USD" ? emergencyPerfUSD : emergencyPerfARS;
+                                        const emergencyPerfDisplay = `${emergencyPerf >= 0 ? "+" : ""}${(emergencyPerf * 100).toFixed(2)}%`;
                                         return (
                                             <InvestmentCard
                                                 title="Fondo de Emergencia"
                                                 amount={emergencyAmount}
                                                 currency={currency}
-                                                returnRate=""
+                                                returnRate={emergencyFunds.length > 0 ? emergencyPerfDisplay : ""}
+                                                isPositive={emergencyPerf >= 0}
                                                 isEmpty={emergencyFunds.length === 0}
                                                 objectivesCount={emergencyFunds.length > 0 ? emergencyFunds.length : undefined}
                                                 objectivesLabel="fondos"
@@ -518,17 +516,26 @@ export default function DashboardPage() {
 
                                     {/* Fondo de Retiro */}
                                     {(() => {
-                                        const retirementTotalUSD = retirementFunds.reduce((s, o) => s + Number((o as any).current_position_value ?? 0), 0);
-                                        const retirementTotalARS = retirementFunds.reduce((s, o) => s + Number((o as any).current_position_value_pesos ?? 0), 0);
+                                        const retirementTotalUSD = retirementFunds.reduce((s, o) => s + (o.current_position_value ?? 0), 0);
+                                        const retirementTotalARS = retirementFunds.reduce((s, o) => s + (o.current_position_value_pesos ?? 0), 0);
                                         const retirementAmount = currency === "USD"
                                             ? `$ ${retirementTotalUSD.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
                                             : `$ ${retirementTotalARS.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`;
+                                        const retirementPerfUSD = retirementFunds.length > 0
+                                            ? retirementFunds.reduce((s, o) => s + (o.performance ?? 0), 0) / retirementFunds.length
+                                            : 0;
+                                        const retirementPerfARS = retirementFunds.length > 0
+                                            ? retirementFunds.reduce((s, o) => s + (o.performance_pesos ?? 0), 0) / retirementFunds.length
+                                            : 0;
+                                        const retirementPerf = currency === "USD" ? retirementPerfUSD : retirementPerfARS;
+                                        const retirementPerfDisplay = `${retirementPerf >= 0 ? "+" : ""}${(retirementPerf * 100).toFixed(2)}%`;
                                         return (
                                             <InvestmentCard
                                                 title="Fondo de Retiro"
                                                 amount={retirementAmount}
                                                 currency={currency}
-                                                returnRate=""
+                                                returnRate={retirementFunds.length > 0 ? retirementPerfDisplay : ""}
+                                                isPositive={retirementPerf >= 0}
                                                 isEmpty={retirementFunds.length === 0}
                                                 objectivesCount={retirementFunds.length > 0 ? retirementFunds.length : undefined}
                                                 objectivesLabel="fondos"

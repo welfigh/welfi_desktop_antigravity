@@ -1,12 +1,11 @@
-import { authApi, engineApi } from "@/lib/api";
+import { authApi, engineApi, productsApi } from "@/lib/api";
 import type {
     UserData,
     PanelResponse,
     PanelData,
     AvailableProfileResponse,
     Portfolio,
-    WelfiPesosPortfolio,
-    WelfiDollarsPortfolio,
+    WelfiFundObjective,
     Objective,
     ObjectivesResponse,
     ObjectiveDetail,
@@ -48,15 +47,35 @@ export async function fetchPortfolios(): Promise<Portfolio[]> {
     return data.data ?? (data as unknown as Portfolio[]);
 }
 
-export async function fetchWelfiPesos(): Promise<WelfiPesosPortfolio[]> {
-    const { data } = await engineApi.get<{ data: WelfiPesosPortfolio[] }>("/get_objectives");
-    return data.data ?? (data as unknown as WelfiPesosPortfolio[]);
+/**
+ * GET /products-microservice/api/v01/objectives?objective_type=FUND
+ * Returns ALL fund objectives. We fetch once and split by currency.
+ */
+async function fetchAllFunds(): Promise<WelfiFundObjective[]> {
+    try {
+        const { data } = await productsApi.get<{ data: { portfolios: WelfiFundObjective[] } }>(
+            "/objectives", { params: { objective_type: "FUND" } }
+        );
+        const portfolios = data?.data?.portfolios;
+        return Array.isArray(portfolios) ? portfolios : [];
+    } catch (err) {
+        console.warn("[fetchAllFunds] Error:", err);
+        return [];
+    }
 }
 
-export async function fetchWelfiDollars(): Promise<WelfiDollarsPortfolio[]> {
-    const { data } = await engineApi.get<{ data: WelfiDollarsPortfolio[] }>("/get_objectives");
-    return data.data ?? (data as unknown as WelfiDollarsPortfolio[]);
+/** Welfi Pesos = FUND objectives with currency_code ARS */
+export async function fetchWelfiPesos(): Promise<WelfiFundObjective[]> {
+    const all = await fetchAllFunds();
+    return all.filter((f) => f.currency_code === "ARS");
 }
+
+/** Welfi Dólares = FUND objectives with currency_code USD */
+export async function fetchWelfiDollars(): Promise<WelfiFundObjective[]> {
+    const all = await fetchAllFunds();
+    return all.filter((f) => f.currency_code === "USD");
+}
+
 
 export async function fetchObjectives(
     type?: "INVESTMENT" | "FUND" | "PACK"
@@ -95,6 +114,47 @@ export async function fetchObjectiveDetail(objectiveId: string): Promise<Objecti
     } catch (err) {
         console.warn("[fetchObjectiveDetail] Error:", err);
         return null;
+    }
+}
+
+/**
+ * GET /welfi-engine/api/v01/get_tracing/{objective_id}
+ * Returns the FULL objective tracing: name, objective_type, configuration,
+ * current_position_value, portfolio[], etc.
+ */
+export async function fetchObjectiveTracing(objectiveId: string): Promise<ObjectiveDetail | null> {
+    try {
+        const { data } = await engineApi.get<{ data: ObjectiveDetail }>(
+            `/get_tracing/${objectiveId}`
+        );
+        return data.data ?? data as unknown as ObjectiveDetail;
+    } catch (err) {
+        console.warn("[fetchObjectiveTracing] Error:", err);
+        return null;
+    }
+}
+
+/**
+ * GET /products-microservice/api/v01/welfi_pesos/{objective_id}
+ * Returns fund-specific detail for FUND-type objectives (Welfi Pesos).
+ * Falls back to /objective/{objective_id} if the first call fails.
+ */
+export async function fetchFundDetail(objectiveId: string): Promise<WelfiFundObjective | null> {
+    try {
+        const { data } = await productsApi.get<WelfiFundObjective>(
+            `/welfi_pesos/${objectiveId}`
+        );
+        return data;
+    } catch {
+        try {
+            const { data } = await productsApi.get<WelfiFundObjective>(
+                `/objective/${objectiveId}`
+            );
+            return data;
+        } catch (err) {
+            console.warn("[fetchFundDetail] Error:", err);
+            return null;
+        }
     }
 }
 
