@@ -6,3 +6,7 @@ dist-ssr
 .env.*.local
 .agent
 .next
+
+Welfi-Backend/
+app_2026-02-13.yaml
+endpoints
