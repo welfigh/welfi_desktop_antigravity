@@ -8,6 +8,8 @@ import type {
     WelfiPesosPortfolio,
     WelfiDollarsPortfolio,
     Objective,
+    ObjectivesResponse,
+    ObjectiveDetail,
 } from "@/types/api.types";
 
 // ─── Auth microservice ────────────────────────────────────────────────────────
@@ -65,6 +67,55 @@ export async function fetchObjectives(
     // Handle both { data: [...] } and raw array responses
     const arr = raw?.data ?? raw?.portfolios ?? raw;
     return Array.isArray(arr) ? arr : [];
+}
+
+// ─── Real objectives fetching (typed response) ────────────────────────────────
+
+/**
+ * GET /welfi-engine/api/v01/get_objectives
+ * Returns the real typed response with customs[] and recommended[] arrays.
+ */
+export async function fetchObjectivesReal(): Promise<ObjectivesResponse["data"]> {
+    const { data } = await engineApi.get<ObjectivesResponse>("/get_objectives");
+    return data.data;
+}
+
+// ─── Objective detail ─────────────────────────────────────────────────────────
+
+/**
+ * GET /welfi-engine/api/v01/get_current_position/{objective_id}
+ * Returns full objective detail including portfolio instruments.
+ */
+export async function fetchObjectiveDetail(objectiveId: string): Promise<ObjectiveDetail | null> {
+    try {
+        const { data } = await engineApi.get<{ data: ObjectiveDetail }>(
+            `/get_current_position/${objectiveId}`
+        );
+        return data.data ?? data as unknown as ObjectiveDetail;
+    } catch (err) {
+        console.warn("[fetchObjectiveDetail] Error:", err);
+        return null;
+    }
+}
+
+/**
+ * GET /welfi-engine/api/v01/objective/{objective_id}/dashboard
+ * Returns objective dashboard with rentability data.
+ */
+export async function fetchObjectiveDashboard(
+    objectiveId: string,
+    timeFrame = "HISTORICAL",
+    currency = "ARS"
+) {
+    try {
+        const { data } = await engineApi.get(
+            `/objective/${objectiveId}/dashboard`,
+            { params: { time_frame: timeFrame, currency } }
+        );
+        return data;
+    } catch {
+        return null;
+    }
 }
 
 // ─── Historical portfolio data ─────────────────────────────────────────────────

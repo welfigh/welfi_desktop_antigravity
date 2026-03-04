@@ -109,6 +109,8 @@ export default function DashboardPage() {
             ]);
             setPanel(panelData);
             setObjectives(Array.isArray(objectivesData) ? objectivesData : []);
+            // DEBUG: inspect raw objectives from API
+            console.log("[DEBUG] Raw objectives:", JSON.stringify(objectivesData, null, 2));
         } catch (err) {
             console.error("Dashboard load error:", err);
             setDataError("No pudimos cargar tus datos. Verificá tu conexión.");
@@ -167,13 +169,17 @@ export default function DashboardPage() {
     const isWelfiPesosPositive = welfiPesosPerfPct >= 0;
 
     // Welfi Dólares (tenencias y rendimiento)
+    const welfiDolaresHoldingsUSD = panel?.welfi_dolares_holdings ?? 0;
     const welfiDolaresPerfPct = panel?.welfi_dolares_performance ?? 0;
+    const welfiDolaresDisplayAmount = currency === "USD"
+        ? `$ ${welfiDolaresHoldingsUSD.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
+        : `$ ${(welfiDolaresHoldingsUSD * dollarValue).toLocaleString("es-AR", { minimumFractionDigits: 2 })}`;
     const welfiDolaresPerfDisplay = `${welfiDolaresPerfPct > 0 ? "+" : ""}${welfiDolaresPerfPct.toFixed(2)}%`;
     const isWelfiDolaresPositive = welfiDolaresPerfPct >= 0;
 
-    // Packs & estrategias del panel (globales y rendimiento)
-    const packsTotal = panel?.packs_holdings ?? 0;
-    const goalsTotal = panel?.goals_holdings ?? 0;
+    // Packs & estrategias del panel (globales, en USD desde engine)
+    const packsHoldingsUSD = panel?.packs_holdings ?? 0;
+    const goalsHoldingsUSD = panel?.goals_holdings ?? 0;
 
     const packsPerfUSD = panel?.packs_performance ?? 0;
     const packsPerfARS = panel?.packs_performance_pesos ?? 0;
@@ -189,6 +195,15 @@ export default function DashboardPage() {
         : `${goalsPerfARS >= 0 ? "+" : ""}${goalsPerfARS.toFixed(2)}%`;
     const isGoalsPositive = currency === "USD" ? goalsPerfUSD >= 0 : goalsPerfARS >= 0;
 
+    // Formatted amounts for Estrategias and Packs (USD from engine, convert to ARS)
+    const goalsDisplayAmount = currency === "USD"
+        ? `$ ${goalsHoldingsUSD.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
+        : `$ ${(goalsHoldingsUSD * dollarValue).toLocaleString("es-AR", { minimumFractionDigits: 2 })}`;
+    const packsDisplayAmount = currency === "USD"
+        ? `$ ${packsHoldingsUSD.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
+        : `$ ${(packsHoldingsUSD * dollarValue).toLocaleString("es-AR", { minimumFractionDigits: 2 })}`;
+
+
     // Disponible para operar
     const availableARS = panel?.available_in_pesos ?? 0;
     const availableUSD = panel?.available_in_dollars ?? 0;
@@ -198,11 +213,12 @@ export default function DashboardPage() {
     };
 
     // Objectives split by type (para los cards de inversión)
-    const strategies = objectives.filter((o) => o.type === "INVESTMENT");
-    const packs = objectives.filter((o) => o.type === "PACK");
-    const funds = objectives.filter((o) => o.type === "FUND");
-    const emergencyFunds = funds.filter((f) => f.name.toLowerCase().includes("emergencia"));
-    const retirementFunds = funds.filter((f) => f.name.toLowerCase().includes("retiro") || f.name.toLowerCase().includes("jubilaci"));
+    // API returns `objective_type`, interface has `type` — check both
+    const getObjType = (o: Objective) => o.objective_type ?? o.type ?? "";
+    const strategies = objectives.filter((o) => getObjType(o) === "INVESTMENT");
+    const packs = objectives.filter((o) => getObjType(o) === "PACK");
+    const emergencyFunds = objectives.filter((o) => getObjType(o) === "EMERGENCY");
+    const retirementFunds = objectives.filter((o) => getObjType(o) === "RETIREMENT");
 
     const welfiPesosInvestments: Investment[] = welfiPesosTotalARS > 0 ? [{
         id: "welfi-pesos",
@@ -440,11 +456,11 @@ export default function DashboardPage() {
                                     {/* Welfi Dólares */}
                                     <InvestmentCard
                                         title="Welfi Dólares"
-                                        amount={`$ ${availableUSD.toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
+                                        amount={welfiDolaresDisplayAmount}
                                         currency={currency}
                                         returnRate={welfiDolaresPerfDisplay}
                                         isPositive={isWelfiDolaresPositive}
-                                        isEmpty={availableUSD === 0}
+                                        isEmpty={welfiDolaresHoldingsUSD === 0}
                                         onAddMoney={() => alert("Próximamente: Sumar welfi dólares")}
                                         onCreateNew={() => alert("Próximamente: Crear inversión en Welfi Dólares")}
                                     />
@@ -452,10 +468,7 @@ export default function DashboardPage() {
                                     {/* Estrategias */}
                                     <InvestmentCard
                                         title="Estrategias de inversión"
-                                        amount={currency === "USD"
-                                            ? `$ ${goalsTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
-                                            : `$ ${goalsTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`
-                                        }
+                                        amount={goalsDisplayAmount}
                                         currency={currency}
                                         returnRate={goalsPerfDisplay}
                                         isPositive={isGoalsPositive}
@@ -469,10 +482,7 @@ export default function DashboardPage() {
                                     {/* Packs */}
                                     <InvestmentCard
                                         title="Packs temáticos"
-                                        amount={currency === "USD"
-                                            ? `$ ${packsTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
-                                            : `$ ${packsTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`
-                                        }
+                                        amount={packsDisplayAmount}
                                         currency={currency}
                                         returnRate={packsPerfDisplay}
                                         isPositive={isPacksPositive}
@@ -484,32 +494,50 @@ export default function DashboardPage() {
                                     />
 
                                     {/* Fondo de Emergencia */}
-                                    {emergencyFunds.length > 0 && (
-                                        <InvestmentCard
-                                            title="Fondo de Emergencia"
-                                            amount={`$ ${emergencyFunds.reduce((s, o) => s + Number((o as any).current_value ?? 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
-                                            currency="USD"
-                                            returnRate="1.5%"
-                                            objectivesCount={emergencyFunds.length}
-                                            objectivesLabel="fondo"
-                                            onViewAll={() => navigate("/investments")}
-                                            onAddMoney={() => handleAddMoneyClick(emergencyFunds.map(objectiveToInvestment), "Fondo de Emergencia")}
-                                        />
-                                    )}
+                                    {(() => {
+                                        const emergencyTotalUSD = emergencyFunds.reduce((s, o) => s + Number((o as any).current_position_value ?? 0), 0);
+                                        const emergencyTotalARS = emergencyFunds.reduce((s, o) => s + Number((o as any).current_position_value_pesos ?? 0), 0);
+                                        const emergencyAmount = currency === "USD"
+                                            ? `$ ${emergencyTotalUSD.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
+                                            : `$ ${emergencyTotalARS.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`;
+                                        return (
+                                            <InvestmentCard
+                                                title="Fondo de Emergencia"
+                                                amount={emergencyAmount}
+                                                currency={currency}
+                                                returnRate=""
+                                                isEmpty={emergencyFunds.length === 0}
+                                                objectivesCount={emergencyFunds.length > 0 ? emergencyFunds.length : undefined}
+                                                objectivesLabel="fondos"
+                                                onViewAll={() => navigate("/investments")}
+                                                onAddMoney={emergencyFunds.length > 0 ? () => handleAddMoneyClick(emergencyFunds.map(objectiveToInvestment), "Fondo de Emergencia") : undefined}
+                                                onCreateNew={() => alert("Próximamente: Crear Fondo de Emergencia")}
+                                            />
+                                        );
+                                    })()}
 
                                     {/* Fondo de Retiro */}
-                                    {retirementFunds.length > 0 && (
-                                        <InvestmentCard
-                                            title="Fondo de retiro"
-                                            amount={`$ ${retirementFunds.reduce((s, o) => s + Number((o as any).current_value ?? 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
-                                            currency="USD"
-                                            returnRate="0.9%"
-                                            objectivesCount={retirementFunds.length}
-                                            objectivesLabel="fondo"
-                                            onViewAll={() => navigate("/investments")}
-                                            onAddMoney={() => handleAddMoneyClick(retirementFunds.map(objectiveToInvestment), "Fondo de retiro")}
-                                        />
-                                    )}
+                                    {(() => {
+                                        const retirementTotalUSD = retirementFunds.reduce((s, o) => s + Number((o as any).current_position_value ?? 0), 0);
+                                        const retirementTotalARS = retirementFunds.reduce((s, o) => s + Number((o as any).current_position_value_pesos ?? 0), 0);
+                                        const retirementAmount = currency === "USD"
+                                            ? `$ ${retirementTotalUSD.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
+                                            : `$ ${retirementTotalARS.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`;
+                                        return (
+                                            <InvestmentCard
+                                                title="Fondo de Retiro"
+                                                amount={retirementAmount}
+                                                currency={currency}
+                                                returnRate=""
+                                                isEmpty={retirementFunds.length === 0}
+                                                objectivesCount={retirementFunds.length > 0 ? retirementFunds.length : undefined}
+                                                objectivesLabel="fondos"
+                                                onViewAll={() => navigate("/investments")}
+                                                onAddMoney={retirementFunds.length > 0 ? () => handleAddMoneyClick(retirementFunds.map(objectiveToInvestment), "Fondo de Retiro") : undefined}
+                                                onCreateNew={() => alert("Próximamente: Crear Fondo de Retiro")}
+                                            />
+                                        );
+                                    })()}
                                     {/* Card CTA: Nueva Inversión */}
                                     <div
                                         className="rounded-2xl border-2 border-dashed border-[#3246ff]/30 hover:border-[#3246ff]/60 bg-white hover:bg-[#3246ff]/5 transition-all cursor-pointer flex flex-col items-center justify-center gap-2 p-4 min-h-[160px] group"

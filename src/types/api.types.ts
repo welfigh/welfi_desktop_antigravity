@@ -117,10 +117,158 @@ export interface WelfiDollarsPortfolio {
 export interface Objective {
     id: string;
     name: string;
-    type: string;
+    type: "INVESTMENT" | "FUND" | "PACK" | "RETIREMENT" | "EMERGENCY" | string;
+    /** API field name for objective type */
+    objective_type?: "INVESTMENT" | "FUND" | "PACK" | "RETIREMENT" | "EMERGENCY" | string;
     currency: string;
     total_value: number;
+    /** Position value in USD */
+    current_position_value?: number;
+    /** Position value in ARS */
+    current_position_value_pesos?: number;
     [key: string]: unknown;
+}
+
+// ─── Engine: Real objectives from get_objectives (get_tracing_by_profile_id) ──
+
+/** Single objective as returned inside `customs[]` / `recommended[]` */
+export interface TracingObjective {
+    id: string;
+    title: string;
+    currency_code: string;
+    objective_type: "INVESTMENT" | "RETIREMENT" | "EMERGENCY" | "PACK" | string;
+    /** Current position in USD */
+    current_position_value: number;
+    /** Current position in ARS */
+    current_position_value_pesos: number;
+    /** Pending amount in USD */
+    pending_amount: number;
+    /** Pending amount in ARS */
+    pending_amount_ars: number;
+    /** Daily performance (fraction, e.g. 0.005 = 0.5%) */
+    performance: number;
+    /** Daily performance in pesos (fraction) */
+    performance_pesos: number;
+    /** Emoji icon */
+    icon: string;
+}
+
+/** Top-level response from GET /get_objectives */
+export interface ObjectivesResponse {
+    cached?: boolean;
+    data: {
+        /** Weighted avg performance (fraction) */
+        performance: number;
+        performance_pesos: number;
+        /** Total amount in USD */
+        amount: number;
+        customs: TracingObjective[];
+        recommended: TracingObjective[];
+    };
+}
+
+// ─── Engine: Objective detail from get_current_position ────────────────────────
+
+export interface InstrumentHolding {
+    instrument_id: string;
+    instrument_code: string;
+    /** Quantity held */
+    qty: number;
+    /** Current price per unit */
+    price: number;
+    /** Total amount originally bought */
+    bought_amount: number;
+    /** Current market value */
+    current_amount: number;
+    /** Percentage of portfolio */
+    percentage: number;
+    /** Instrument type: EQUITY, BOND, FUND, CEDEAR, GUARANTEE, etc. */
+    type: string;
+    instrument_type?: string;
+}
+
+export interface ObjectiveDetailConfig {
+    starting_amount?: number;
+    monthly_amount?: number;
+    goal_amount?: number;
+}
+
+export interface ObjectiveDetail {
+    id: string;
+    profile_id: string;
+    name: string;
+    created_at?: string;
+    objective_type: string;
+    configuration: ObjectiveDetailConfig;
+    bought_position_value: number | null;
+    current_position_value: number;
+    current_position_value_usd: number;
+    rentability: number | null;
+    has_pending_orders: boolean | null;
+    currency_code: string;
+    items_qty: number | null;
+    packets: number;
+    investment_strategy?: string;
+    goal_deadline?: string;
+    portfolio: InstrumentHolding[];
+    objective_configuration_id?: string;
+    /** Earned in pesos (from tracing.py) */
+    earned_pesos?: number;
+    /** Day-over-day percentage change */
+    percentage_change?: number;
+}
+
+// ─── Tickets / Movimientos ────────────────────────────────────────────────────
+
+export type TicketOrderType = 0 | 1 | 2 | 3 | 4;
+// 0=Suscripción (BUY), 1=Rescate (SELL), 2=Comisión, 3=Rebalanceo compra, 4=Rebalanceo venta
+
+export type TicketStatus = 0 | 1 | 2 | 3 | 4 | 5 | 10;
+// 0=Pendiente, 1=En proceso, 2=Ejecutada, 3=Cancelada, 4=Rechazada, 5=Error, 10=Programada
+
+export interface TicketItem {
+    id: string;
+    instrument_code: string;
+    instrument_type: string;
+    qty: number | null;
+    price: number | null;
+    amount: number;
+    market_order_status_id: string | null;
+    settlement_date: string | null;
+}
+
+export interface MepConversion {
+    direction: "usd_to_ars" | "ars_to_usd"; // usd_to_ars = sell USD, buy ARS; ars_to_usd = sell ARS, buy USD
+    original_currency: string;   // currency sold
+    original_amount: number;     // amount sold
+    target_currency: string;     // currency received
+    mep_rate: number;            // market_quote from OrderMep
+    converted_amount: number;    // amount received
+}
+
+export interface Ticket {
+    id: string;
+    order_num: number;
+    order_type: TicketOrderType;
+    order_status: TicketStatus;
+    amount: number;
+    currency_code: string;
+    created_at: string;
+    updated_at: string;
+    objective_id: string;
+    objective_name: string;
+    objective_type: string;
+    deleted_at: string | null;
+    items?: TicketItem[];
+    mep?: MepConversion;
+    executed_amount?: number; // sum of OrderItem amounts — may differ from requested `amount`
+}
+
+export interface TicketsResponse {
+    data: {
+        total: number;
+        orders: Ticket[];
+    };
 }
 
 // ─── Generic API error ────────────────────────────────────────────────────────

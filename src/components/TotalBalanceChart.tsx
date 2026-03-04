@@ -236,7 +236,7 @@ export function TotalBalanceChart({
   const values = chartData.map((d) => d.value);
   const minVal = Math.min(...values);
   const maxVal = Math.max(...values);
-  const buffer = Math.max((maxVal - minVal) * 0.18, maxVal * 0.05);
+  const buffer = Math.max((maxVal - minVal) * 0.08, maxVal * 0.02);
   const domain: [number, number] = [minVal - buffer, maxVal + buffer];
 
   const lineColor = "#3246ff"; // Always primary blue for Mercury style
@@ -245,7 +245,7 @@ export function TotalBalanceChart({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4 px-1">
+      <div className="flex items-center justify-between mb-2 px-1">
         <span className="text-gray-500 text-[13px] font-medium tracking-wide">
           Evolución histórica
         </span>
@@ -253,11 +253,11 @@ export function TotalBalanceChart({
       </div>
 
       {/* Chart */}
-      <div className="flex-1 min-h-0" style={{ minHeight: 180 }}>
-        <ResponsiveContainer width="100%" height={200}>
+      <div className="flex-1 min-h-0">
+        <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={chartData}
-            margin={{ top: 6, right: 2, left: 0, bottom: 0 }}
+            margin={{ top: 4, right: 4, left: 4, bottom: 0 }}
           >
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -271,8 +271,9 @@ export function TotalBalanceChart({
               axisLine={false}
               tickLine={false}
               tick={{ fill: "#9ca3af", fontSize: 10, fontWeight: 500 }}
-              interval="preserveStartEnd"
-              dy={8}
+              interval={"equidistantPreserveStart"}
+              minTickGap={40}
+              dy={6}
             />
             <YAxis domain={domain} hide />
 
