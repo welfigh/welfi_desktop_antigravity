@@ -13,11 +13,10 @@ import {
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   PieChart,
   Pie,
@@ -28,12 +27,55 @@ import {
   fetchObjectiveTracing,
   fetchObjectiveDashboard,
   fetchFundDetail,
+  fetchLastHolding,
 } from "../../../../services/portfolio.service";
+import type { HoldingData } from "../../../../services/portfolio.service";
 import type {
   ObjectiveDetail,
   InstrumentHolding,
   WelfiFundObjective,
 } from "../../../../types/api.types";
+
+// ── Chart types ──────────────────────────────────────────────────────────────
+
+type ChartPeriod = "1M" | "YTD" | "1A" | "HISTORICAL";
+interface ChartPoint { x: string; position: number; contributions: number; }
+
+function formatChartValue(value: number, cur: "ARS" | "USD"): string {
+  if (cur === "ARS") {
+    if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(2)}M`;
+    if (value >= 1_000) return `$${(value / 1_000).toFixed(0)}K`;
+    return `$${value.toFixed(0)}`;
+  }
+  if (value >= 1_000_000) return `USD ${(value / 1_000_000).toFixed(2)}M`;
+  if (value >= 1_000) return `USD ${(value / 1_000).toFixed(1)}K`;
+  return `USD ${value.toFixed(2)}`;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function ChartTooltip({ active, payload, label, cur }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div
+      style={{
+        background: "rgba(255,255,255,0.95)",
+        backdropFilter: "blur(16px)",
+        border: "1px solid rgba(0,0,0,0.06)",
+        borderRadius: 10,
+        padding: "8px 14px",
+        minWidth: 140,
+        boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+      }}
+    >
+      <p style={{ color: "#6b7280", fontSize: 11, fontWeight: 500, marginBottom: 4 }}>{label}</p>
+      {payload.map((p: { dataKey: string; value: number; color: string }, i: number) => (
+        <p key={i} style={{ color: p.color, fontSize: 13, fontWeight: 600 }}>
+          {p.dataKey === "position" ? "Posición" : "Aportes"}: {formatChartValue(p.value, cur)}
+        </p>
+      ))}
+    </div>
+  );
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -72,7 +114,7 @@ function getObjectiveTypeLabel(type: string | undefined): string {
     EMERGENCY: "Fondo de Emergencia",
     RETIREMENT: "Fondo de Retiro",
     FUND: "Welfi Fund",
-    PORTFOLIO: "Cartera",
+    PORTFOLIO: "Pack temático",
   };
   return map[type ?? ""] ?? type ?? "Inversión";
 }
@@ -99,6 +141,10 @@ function getTypeAccent(type: string | undefined) {
     FUND: {
       gradient: "from-[#3246ff] via-[#4856ff] to-[#5a6aff]",
       badgeCls: "bg-blue-50 text-blue-600",
+    },
+    PORTFOLIO: {
+      gradient: "from-[#9b59b6] via-[#8e44ad] to-[#7d3c98]",
+      badgeCls: "bg-purple-50 text-purple-600",
     },
   };
   return (
@@ -170,11 +216,7 @@ export default function InvestmentDetailPage() {
   // ── State ──
   const [detail, setDetail] = useState<ObjectiveDetail | null>(null);
   const [fundDetail, setFundDetail] = useState<WelfiFundObjective | null>(null);
-  const [dashboard, setDashboard] = useState<{
-    evolution?: { date: string; value: number }[];
-    rentability?: number;
-    rentability_pesos?: number;
-  } | null>(null);
+  const [holdingData, setHoldingData] = useState<HoldingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -183,7 +225,61 @@ export default function InvestmentDetailPage() {
   >("overview");
   const [currency, setCurrency] = useState<"ARS" | "USD">("ARS");
 
-  // ── Data loading ──
+  // Chart state
+  const [chartData, setChartData] = useState<ChartPoint[]>([]);
+  const [chartPerf, setChartPerf] = useState<number>(0);
+  const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("HISTORICAL");
+  const [chartCurrency, setChartCurrency] = useState<"ARS" | "USD">("ARS");
+  const [chartLoading, setChartLoading] = useState(false);
+
+  // ── Parse dashboard response into chart points ──
+  const parseDashboard = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (raw: any): { points: ChartPoint[]; perf: number } => {
+      const inner = raw?.data ?? raw;
+      const series = inner?.series;
+      const perf: number = inner?.performance ?? 0;
+      if (!series || !Array.isArray(series) || series.length < 2) {
+        return { points: [], perf };
+      }
+      const positionSeries: { x: string; y: number }[] = series[0]?.data ?? [];
+      const contribSeries: { x: string; y: number }[] = series[1]?.data ?? [];
+
+      const points: ChartPoint[] = positionSeries.map((pt, i) => ({
+        x: pt.x,
+        position: pt.y,
+        contributions: contribSeries[i]?.y ?? 0,
+      }));
+      return { points, perf };
+    },
+    []
+  );
+
+  // ── Load chart data (period / currency change) ──
+  const loadChart = useCallback(
+    async (period: ChartPeriod, cur: "ARS" | "USD") => {
+      if (!id) return;
+      setChartLoading(true);
+      try {
+        const dashboardData = await fetchObjectiveDashboard(id, period, cur);
+        if (dashboardData) {
+          const { points, perf } = parseDashboard(dashboardData);
+          setChartData(points);
+          setChartPerf(perf);
+        } else {
+          setChartData([]);
+          setChartPerf(0);
+        }
+      } catch {
+        setChartData([]);
+      } finally {
+        setChartLoading(false);
+      }
+    },
+    [id, parseDashboard]
+  );
+
+  // ── Main data loading ──
   const loadData = useCallback(
     async (isRefresh = false) => {
       if (!id) return;
@@ -192,10 +288,11 @@ export default function InvestmentDetailPage() {
       setError(null);
 
       try {
-        // Fetch tracing (full detail) and dashboard in parallel
-        const [tracingData, dashboardData] = await Promise.all([
+        // Fetch tracing (full detail), chart, and holdings in parallel
+        const [tracingData, dashboardData, holdingsResult] = await Promise.all([
           fetchObjectiveTracing(id),
           fetchObjectiveDashboard(id, "HISTORICAL", "ARS"),
+          fetchLastHolding(id),
         ]);
 
         if (!tracingData) {
@@ -204,11 +301,12 @@ export default function InvestmentDetailPage() {
         }
 
         setDetail(tracingData);
+        if (holdingsResult) setHoldingData(holdingsResult);
 
         // Set initial currency based on objective currency
-        if (tracingData.currency_code === "USD") {
-          setCurrency("USD");
-        }
+        const initCur = tracingData.currency_code === "USD" ? "USD" as const : "ARS" as const;
+        setCurrency(initCur);
+        setChartCurrency(initCur);
 
         // If it's a FUND type, also fetch from Products API
         if (
@@ -223,15 +321,15 @@ export default function InvestmentDetailPage() {
           }
         }
 
-        // Parse dashboard data
+        // Parse chart data from initial load
         if (dashboardData) {
-          const raw = dashboardData?.data ?? dashboardData;
-          setDashboard({
-            evolution: raw?.evolution ?? raw?.data_points ?? [],
-            rentability: raw?.rentability ?? raw?.performance ?? null,
-            rentability_pesos:
-              raw?.rentability_pesos ?? raw?.performance_pesos ?? null,
-          });
+          const { points, perf } = parseDashboard(dashboardData);
+          setChartData(points);
+          setChartPerf(perf);
+          // If initial was ARS but objective is USD, reload chart in USD
+          if (initCur === "USD") {
+            loadChart("HISTORICAL", "USD");
+          }
         }
       } catch (err) {
         console.error("[InvestmentDetailPage] Load error:", err);
@@ -241,7 +339,7 @@ export default function InvestmentDetailPage() {
         setRefreshing(false);
       }
     },
-    [id]
+    [id, parseDashboard, loadChart]
   );
 
   useEffect(() => {
@@ -284,18 +382,17 @@ export default function InvestmentDetailPage() {
   }
 
   // ── Compute display values ──
-  const isFund =
-    detail.objective_type === "FUND" || detail.objective_type === "PORTFOLIO";
+  const isFund = detail.objective_type === "FUND";
+  const isPack = detail.objective_type === "PORTFOLIO";
   const objType = detail.objective_type;
   const accent = getTypeAccent(objType);
   const typeLabel = getObjectiveTypeLabel(objType);
 
-  // Position values
-  const currentValueARS = detail.current_position_value ?? 0;
-  const currentValueUSD = detail.current_position_value_usd ?? 0;
-  const boughtValue = detail.bought_position_value ?? 0;
+  // Position values — holdings is the primary financial source
+  const currentValueARS = holdingData?.current_position_value ?? detail.current_position_value ?? 0;
+  const currentValueUSD = holdingData?.current_position_value_usd ?? detail.current_position_value_usd ?? 0;
 
-  // If we have fund detail, use its richer data
+  // If we have fund detail, use its richer data for performance
   const fundPerf = fundDetail
     ? currency === "ARS"
       ? fundDetail.performance_pesos
@@ -307,20 +404,44 @@ export default function InvestmentDetailPage() {
       ? `$ ${formatARS(isFund && fundDetail ? (fundDetail.current_position_value_pesos ?? currentValueARS) : currentValueARS)}`
       : `U$S ${formatUSD(isFund && fundDetail ? (fundDetail.current_position_value ?? currentValueUSD) : currentValueUSD)}`;
 
-  // Gains = current - bought
-  const gains =
-    currentValueARS - boughtValue;
-  const gainsPositive = gains >= 0;
+  // Chart period labels
+  const chartPeriods: { key: ChartPeriod; label: string }[] = [
+    { key: "1M", label: "1M" },
+    { key: "YTD", label: "YTD" },
+    { key: "1A", label: "1A" },
+    { key: "HISTORICAL", label: "Histórico" },
+  ];
 
-  // Performance
+  // Contributions, withdrawals, profit (from holdings, with currency awareness)
+  const contributionsARS = holdingData?.contributions_accrued ?? 0;
+  const contributionsUSD = holdingData?.contributions_accrued_usd ?? 0;
+  const withdrawalsARS = holdingData?.withdrawal_accrued ?? 0;
+  const withdrawalsUSD = holdingData?.withdrawal_accrued_usd ?? 0;
+  const profitARS = holdingData?.profit_accrued ?? 0;
+  const profitUSD = holdingData?.profit_accrued_usd ?? 0;
+
+  const displayContributions = currency === "ARS" ? contributionsARS : contributionsUSD;
+  const displayWithdrawals = currency === "ARS" ? withdrawalsARS : withdrawalsUSD;
+  const displayProfit = currency === "ARS" ? profitARS : profitUSD;
+  const profitPositive = displayProfit >= 0;
+
+  // Performance — from holdings rentability
   const perf =
     fundPerf ??
-    dashboard?.rentability ??
+    (holdingData ? (currency === "ARS" ? holdingData.rentability_accrued : holdingData.rentability_accrued_usd) : null) ??
+    (chartPerf !== 0 ? chartPerf : null) ??
     detail.rentability ??
     detail.percentage_change ??
     0;
   const perfDisplay = formatPerformance(perf);
   const perfPositive = (perf ?? 0) >= 0;
+
+  // Daily performance — for the title badge
+  const dailyPerf = holdingData
+    ? (currency === "ARS" ? holdingData.rentability_daily : holdingData.rentability_daily_usd)
+    : detail.percentage_change ?? 0;
+  const dailyPerfDisplay = formatPerformance(dailyPerf);
+  const dailyPerfPositive = (dailyPerf ?? 0) >= 0;
 
   // Configuration
   const config = detail.configuration ?? {};
@@ -335,16 +456,13 @@ export default function InvestmentDetailPage() {
       : 0;
   const goalReached = goalProgress >= 100;
 
-  // Portfolio instruments
-  const portfolio: InstrumentHolding[] = detail.portfolio ?? [];
+  // Portfolio instruments — from holdings, fallback to tracing
+  const portfolio: InstrumentHolding[] = holdingData?.portfolio as InstrumentHolding[] ?? detail.portfolio ?? [];
 
   // Pending amounts
   const pendingAmount = isFund && fundDetail
     ? (currency === "ARS" ? fundDetail.pending_amount_ars : fundDetail.pending_amount)
     : 0;
-
-  // Evolution chart data
-  const evolutionData = dashboard?.evolution ?? [];
 
   // Tab config
   const tabs = [
@@ -407,9 +525,9 @@ export default function InvestmentDetailPage() {
               {detail.name}
             </h1>
             <span
-              className={`px-3 py-1 rounded-full text-sm font-bold ${perfPositive ? "bg-[#CEF2C5] text-green-800" : "bg-red-100 text-red-800"}`}
+              className={`px-3 py-1 rounded-full text-sm font-bold ${dailyPerfPositive ? "bg-[#CEF2C5] text-green-800" : "bg-red-100 text-red-800"}`}
             >
-              {perfDisplay}
+              {dailyPerfDisplay}
             </span>
           </div>
 
@@ -446,12 +564,12 @@ export default function InvestmentDetailPage() {
             {/* Aportes */}
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 mb-2">
-                <Plus className="size-4 text-gray-500" />
+                <Plus className="size-4 text-blue-500" />
               </div>
               <p className="text-2xl font-black text-gray-900 tabular-nums">
                 {currency === "ARS"
-                  ? `$ ${formatCurrency(boughtValue > 0 ? boughtValue : startingAmount)}`
-                  : `U$S ${formatCurrency(boughtValue > 0 ? boughtValue : startingAmount)}`}
+                  ? `$ ${formatCurrency(displayContributions)}`
+                  : `U$S ${formatCurrency(displayContributions)}`}
               </p>
               <p className="text-sm text-gray-600 font-semibold">Aportes</p>
             </div>
@@ -459,37 +577,35 @@ export default function InvestmentDetailPage() {
             {/* Ganancias */}
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 mb-2">
-                {gainsPositive ? (
+                {profitPositive ? (
                   <TrendingUp className="size-4 text-green-600" />
                 ) : (
                   <TrendingDown className="size-4 text-red-500" />
                 )}
               </div>
               <p
-                className={`text-2xl font-black tabular-nums ${gainsPositive ? "text-green-600" : "text-red-500"}`}
+                className={`text-2xl font-black tabular-nums ${profitPositive ? "text-green-600" : "text-red-500"}`}
               >
                 {currency === "ARS"
-                  ? `$ ${formatCurrency(Math.abs(gains))}`
-                  : `U$S ${formatCurrency(Math.abs(gains))}`}
+                  ? `$ ${formatCurrency(Math.abs(displayProfit))}`
+                  : `U$S ${formatCurrency(Math.abs(displayProfit))}`}
               </p>
               <p className="text-sm text-gray-600 font-semibold">
-                {gainsPositive ? "Ganancia" : "Pérdida"}
+                {profitPositive ? "Ganancia" : "Pérdida"}
               </p>
             </div>
 
-            {/* Retiros / Pending */}
+            {/* Retiros */}
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 mb-2">
-                <Minus className="size-4 text-gray-500" />
+                <Minus className="size-4 text-orange-500" />
               </div>
               <p className="text-2xl font-black text-gray-900 tabular-nums">
-                {pendingAmount > 0
-                  ? (currency === "ARS"
-                    ? `$ ${formatCurrency(pendingAmount)}`
-                    : `U$S ${formatCurrency(pendingAmount)}`)
-                  : "$ 0"}
+                {currency === "ARS"
+                  ? `$ ${formatCurrency(displayWithdrawals)}`
+                  : `U$S ${formatCurrency(displayWithdrawals)}`}
               </p>
-              <p className="text-sm text-gray-600 font-semibold">Pendiente</p>
+              <p className="text-sm text-gray-600 font-semibold">Retiros</p>
             </div>
           </div>
 
@@ -518,10 +634,10 @@ export default function InvestmentDetailPage() {
               ) : (
                 <span
                   className={`px-3 py-1 rounded-full text-xs font-bold ${goalProgress >= 75
-                      ? "bg-orange-100 text-orange-700"
-                      : goalProgress >= 50
-                        ? "bg-purple-100 text-purple-700"
-                        : "bg-blue-100 text-blue-700"
+                    ? "bg-orange-100 text-orange-700"
+                    : goalProgress >= 50
+                      ? "bg-purple-100 text-purple-700"
+                      : "bg-blue-100 text-blue-700"
                     }`}
                 >
                   {goalProgress}% completado
@@ -557,12 +673,12 @@ export default function InvestmentDetailPage() {
                 ))}
                 <div
                   className={`h-full rounded-full transition-all duration-1000 ease-out ${goalReached
-                      ? "bg-gradient-to-r from-emerald-400 via-green-500 to-emerald-600"
-                      : goalProgress >= 75
-                        ? "bg-gradient-to-r from-orange-400 to-amber-500"
-                        : goalProgress >= 50
-                          ? "bg-gradient-to-r from-purple-500 to-pink-500"
-                          : "bg-gradient-to-r from-[#3246ff] to-[#4856ff]"
+                    ? "bg-gradient-to-r from-emerald-400 via-green-500 to-emerald-600"
+                    : goalProgress >= 75
+                      ? "bg-gradient-to-r from-orange-400 to-amber-500"
+                      : goalProgress >= 50
+                        ? "bg-gradient-to-r from-purple-500 to-pink-500"
+                        : "bg-gradient-to-r from-[#3246ff] to-[#4856ff]"
                     }`}
                   style={{ width: `${goalProgress}%` }}
                 />
@@ -646,8 +762,8 @@ export default function InvestmentDetailPage() {
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === tab.key
-                  ? "bg-gradient-to-r from-[#3246ff] to-[#4856ff] text-white shadow-lg"
-                  : "text-gray-600 hover:bg-gray-100"
+                ? "bg-gradient-to-r from-[#3246ff] to-[#4856ff] text-white shadow-lg"
+                : "text-gray-600 hover:bg-gray-100"
                 }`}
             >
               {tab.label}
@@ -659,80 +775,177 @@ export default function InvestmentDetailPage() {
         {activeTab === "overview" && (
           <div className="space-y-6">
             {/* Evolution chart */}
-            {evolutionData.length > 0 && (
-              <div className="bg-white rounded-3xl shadow-xl p-8">
-                <h2 className="text-xl font-black text-gray-900 mb-6">
+            <div className="bg-white rounded-3xl shadow-xl p-8">
+              {/* Header with period selector and currency toggle */}
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-gray-500 text-[13px] font-medium tracking-wide">
                   Evolución histórica
-                </h2>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={evolutionData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis
-                        dataKey="date"
-                        stroke="#9ca3af"
-                        style={{ fontSize: "11px", fontWeight: 600 }}
-                        tickFormatter={(v: string) => {
-                          try {
-                            const d = new Date(v);
-                            return `${d.getDate()}/${d.getMonth() + 1}`;
-                          } catch {
-                            return v;
-                          }
+                </span>
+                <div className="flex items-center gap-3">
+                  {/* Currency toggle */}
+                  <div className="flex gap-0.5 bg-gray-100 rounded-lg p-0.5">
+                    {(["ARS", "USD"] as const).map((cur) => (
+                      <button
+                        key={cur}
+                        onClick={() => {
+                          setChartCurrency(cur);
+                          loadChart(chartPeriod, cur);
                         }}
-                      />
-                      <YAxis
-                        stroke="#9ca3af"
-                        style={{ fontSize: "11px", fontWeight: 600 }}
-                        tickFormatter={(value: number) =>
-                          `$${formatCurrency(value)}`
-                        }
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "#fff",
-                          border: "2px solid #3246ff",
-                          borderRadius: "12px",
-                          fontWeight: 700,
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${chartCurrency === cur
+                          ? "bg-white text-gray-900 shadow-sm"
+                          : "text-gray-500 hover:text-gray-700"
+                          }`}
+                      >
+                        {cur === "ARS" ? "🇦🇷 ARS" : "🇺🇸 USD"}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Period selector */}
+                  <div className="flex gap-0.5">
+                    {chartPeriods.map((p) => (
+                      <button
+                        key={p.key}
+                        onClick={() => {
+                          setChartPeriod(p.key);
+                          loadChart(p.key, chartCurrency);
                         }}
-                        formatter={(value: number) => [
-                          `$${formatARS(value)}`,
-                          "Saldo",
-                        ]}
-                      />
-                      <defs>
-                        <linearGradient
-                          id="colorGradient"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="5%"
-                            stopColor="#3246ff"
-                            stopOpacity={0.3}
-                          />
-                          <stop
-                            offset="95%"
-                            stopColor="#3246ff"
-                            stopOpacity={0}
-                          />
-                        </linearGradient>
-                      </defs>
-                      <Line
-                        type="monotone"
-                        dataKey="value"
-                        stroke="#3246ff"
-                        strokeWidth={3}
-                        dot={false}
-                        activeDot={{ r: 5, fill: "#3246ff" }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                        style={{
+                          padding: "2px 10px",
+                          borderRadius: 6,
+                          fontSize: 12,
+                          fontWeight: 500,
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                          border: "none",
+                          outline: "none",
+                          background: chartPeriod === p.key ? "#f3f4f6" : "transparent",
+                          color: chartPeriod === p.key ? "#111827" : "#6b7280",
+                        }}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-            )}
+
+              {/* Performance badge */}
+              {chartPerf !== 0 && (
+                <div className="mb-4">
+                  <span
+                    className={`inline-block text-xs font-bold px-2.5 py-1 rounded-lg ${chartPerf >= 0
+                      ? "bg-green-50 text-green-700"
+                      : "bg-red-50 text-red-700"
+                      }`}
+                  >
+                    {chartPerf >= 0 ? "+" : ""}
+                    {(chartPerf * 100).toFixed(2)}% rendimiento
+                  </span>
+                </div>
+              )}
+
+              {/* Chart */}
+              {chartLoading ? (
+                <div className="h-72 flex items-center justify-center">
+                  <div className="w-8 h-8 border-2 border-[#3246ff] border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : chartData.length > 0 ? (
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={chartData}
+                      margin={{ top: 4, right: 4, left: 4, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="posGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#3246ff" stopOpacity={0.15} />
+                          <stop offset="100%" stopColor="#3246ff" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="contribGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#14B87D" stopOpacity={0.12} />
+                          <stop offset="100%" stopColor="#14B87D" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis
+                        dataKey="x"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: "#9ca3af", fontSize: 10, fontWeight: 500 }}
+                        interval={"equidistantPreserveStart"}
+                        minTickGap={40}
+                        dy={6}
+                      />
+                      <YAxis hide />
+                      <Tooltip
+                        content={<ChartTooltip cur={chartCurrency} />}
+                        cursor={{
+                          stroke: "#e5e7eb",
+                          strokeWidth: 1,
+                          strokeDasharray: "4 4",
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="position"
+                        name="Posición"
+                        stroke="#3246ff"
+                        strokeWidth={2}
+                        fill="url(#posGrad)"
+                        dot={false}
+                        activeDot={{
+                          r: 4.5,
+                          fill: "#3246ff",
+                          stroke: "white",
+                          strokeWidth: 2,
+                        }}
+                        animationDuration={500}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="contributions"
+                        name="Aportes"
+                        stroke="#14B87D"
+                        strokeWidth={2}
+                        fill="url(#contribGrad)"
+                        dot={false}
+                        activeDot={{
+                          r: 4.5,
+                          fill: "#14B87D",
+                          stroke: "white",
+                          strokeWidth: 2,
+                        }}
+                        animationDuration={500}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-72 flex items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50/50">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm border border-gray-100">
+                      <span className="text-xl">📊</span>
+                    </div>
+                    <p className="text-gray-500 text-[13px] font-medium">
+                      Aún no hay datos históricos
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Legend */}
+              {chartData.length > 0 && (
+                <div className="flex items-center gap-6 mt-4 pt-3 border-t border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#3246ff]" />
+                    <span className="text-xs font-medium text-gray-600">Posición actual</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#14B87D]" />
+                    <span className="text-xs font-medium text-gray-600">Aportes acumulados</span>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Quick stats */}
             <div className="grid grid-cols-2 gap-4">

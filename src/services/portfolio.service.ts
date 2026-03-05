@@ -6,6 +6,7 @@ import type {
     AvailableProfileResponse,
     Portfolio,
     WelfiFundObjective,
+    PortfolioPack,
     Objective,
     ObjectivesResponse,
     ObjectiveDetail,
@@ -76,6 +77,51 @@ export async function fetchWelfiDollars(): Promise<WelfiFundObjective[]> {
     return all.filter((f) => f.currency_code === "USD");
 }
 
+/**
+ * GET /products-microservice/api/v01/objectives?objective_type=PORTFOLIO
+ * + GET /products-microservice/api/v01/portfolios  (for order_items count)
+ * Returns invested packs with performance data.
+ */
+export async function fetchInvestedPacks(): Promise<PortfolioPack[]> {
+    try {
+        const [objRes, packRes] = await Promise.all([
+            productsApi.get<{ data: { portfolios: WelfiFundObjective[] } }>(
+                "/objectives", { params: { objective_type: "PORTFOLIO" } }
+            ),
+            productsApi.get<{ data: PortfolioPack[] }>("/portfolios"),
+        ]);
+
+        const objPortfolios = objRes.data?.data?.portfolios ?? [];
+        const rawPacks = Array.isArray(packRes.data?.data) ? packRes.data.data : [];
+        const investedPacks = rawPacks.filter((p) => p.objective_id != null);
+
+        // Merge performance data from /objectives into pack data
+        const perfMap = new Map<string, WelfiFundObjective>();
+        for (const o of objPortfolios) {
+            perfMap.set(o.id, o);
+        }
+
+        // Enrich packs with REAL position data from objectives endpoint.
+        // Only include packs that actually appear in /objectives (have a real position).
+        // Packs not in /objectives have $0 position and should not be shown.
+        return investedPacks
+            .filter((pack) => pack.objective_id != null && perfMap.has(pack.objective_id))
+            .map((pack) => {
+                const perf = perfMap.get(pack.objective_id!)!;
+                return {
+                    ...pack,
+                    performance: perf.performance ?? 0,
+                    performance_pesos: perf.performance_pesos ?? 0,
+                    current_position_value: perf.current_position_value ?? 0,
+                    current_position_value_pesos: perf.current_position_value_pesos ?? 0,
+                };
+            })
+            .filter((pack) => (pack.current_position_value_pesos ?? 0) > 0 || (pack.current_position_value ?? 0) > 0);
+    } catch (err) {
+        console.warn("[fetchInvestedPacks] Error:", err);
+        return [];
+    }
+}
 
 export async function fetchObjectives(
     type?: "INVESTMENT" | "FUND" | "PACK"
@@ -155,6 +201,42 @@ export async function fetchFundDetail(objectiveId: string): Promise<WelfiFundObj
             console.warn("[fetchFundDetail] Error:", err);
             return null;
         }
+    }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface HoldingData {
+    objective_id: string;
+    profile_id: string;
+    date: string;
+    contributions_accrued: number;
+    contributions_accrued_usd: number;
+    withdrawal_accrued: number;
+    withdrawal_accrued_usd: number;
+    profit_accrued: number;
+    profit_accrued_usd: number;
+    current_position_value: number;
+    current_position_value_usd: number;
+    rentability_accrued: number;
+    rentability_accrued_usd: number;
+    rentability_daily: number;
+    rentability_daily_usd: number;
+    [key: string]: unknown;
+}
+
+/**
+ * GET /welfi-engine/api/v01/last_holding/{objective_id}
+ * Returns the latest holding snapshot with contributions, withdrawals, profit, etc.
+ */
+export async function fetchLastHolding(objectiveId: string): Promise<HoldingData | null> {
+    try {
+        const { data } = await engineApi.get<{ data: HoldingData }>(
+            `/last_holding/${objectiveId}`
+        );
+        return data.data ?? data as unknown as HoldingData;
+    } catch (err) {
+        console.warn("[fetchLastHolding] Error:", err);
+        return null;
     }
 }
 

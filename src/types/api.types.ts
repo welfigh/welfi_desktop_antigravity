@@ -129,6 +129,32 @@ export type WelfiPesosPortfolio = WelfiFundObjective;
 /** @deprecated — use WelfiFundObjective */
 export type WelfiDollarsPortfolio = WelfiFundObjective;
 
+/** Themed pack (portfolio) from Products API /portfolios */
+export interface PortfolioPack {
+    objective_configuration_id: string;
+    name: string;
+    type: "PORTFOLIO";
+    commission_amount: number;
+    currency_code: string;
+    strategy: number;
+    /** Current value in native currency */
+    value: number;
+    order_items: {
+        ticker: string;
+        percentage: number;
+        name?: string;
+        [key: string]: unknown;
+    }[];
+    packets: number;
+    /** Set when user has invested — null means available but not invested */
+    objective_id: string | null;
+    /** Merged from /objectives endpoint */
+    performance?: number;
+    performance_pesos?: number;
+    current_position_value?: number;
+    current_position_value_pesos?: number;
+}
+
 export interface Objective {
     id: string;
     name: string;
@@ -218,7 +244,15 @@ export interface ObjectiveDetail {
     bought_position_value: number | null;
     current_position_value: number;
     current_position_value_usd: number;
+    contributions_accrued?: number | null;
+    contributions_accrued_usd?: number | null;
+    withdrawal_accrued?: number | null;
+    withdrawal_accrued_usd?: number | null;
+    profit_accrued?: number | null;
+    profit_accrued_usd?: number | null;
     rentability: number | null;
+    rentability_accrued?: number | null;
+    rentability_accrued_usd?: number | null;
     has_pending_orders: boolean | null;
     currency_code: string;
     items_qty: number | null;

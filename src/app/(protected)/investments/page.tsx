@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, Plus, RefreshCw, TrendingUp, TrendingDown } from "lucide-react";
+import { ChevronRight, ChevronDown, Plus, RefreshCw, TrendingUp, TrendingDown } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { AddToInvestmentFlow } from "../../../components/AddToInvestmentFlow";
@@ -11,8 +11,9 @@ import {
   fetchPanel,
   fetchWelfiPesos,
   fetchWelfiDollars,
+  fetchInvestedPacks,
 } from "../../../services/portfolio.service";
-import type { TracingObjective, PanelData, WelfiFundObjective } from "../../../types/api.types";
+import type { TracingObjective, PanelData, WelfiFundObjective, PortfolioPack } from "../../../types/api.types";
 import type { Investment } from "../../../constants/mockData";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -87,6 +88,47 @@ function getTypeBadge(type: string) {
   return map[type] ?? { label: type, cls: "bg-gray-50 text-gray-600" };
 }
 
+// ─── Collapsible Section Header ───────────────────────────────────────────────
+
+function SectionHeader({
+  accentBg,
+  label,
+  count,
+  totalDisplay,
+  isOpen,
+  onToggle,
+}: {
+  accentBg: string;
+  label: string;
+  count: number;
+  totalDisplay?: string;
+  isOpen: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      onClick={onToggle}
+      className="w-full flex items-center gap-2.5 mb-3 group/header cursor-pointer select-none"
+    >
+      <div className={`w-0.5 h-5 ${accentBg} rounded-full flex-shrink-0`} />
+      <h3 className="text-sm font-bold text-gray-800">{label}</h3>
+      <span className="text-[11px] text-gray-400 font-medium bg-gray-100 px-1.5 py-0.5 rounded-md">
+        {count}
+      </span>
+      {!isOpen && totalDisplay && (
+        <span className="text-sm font-bold text-gray-500 tabular-nums ml-1">
+          {totalDisplay}
+        </span>
+      )}
+      <div className="flex-1 h-px bg-gray-100" />
+      <ChevronDown
+        className={`size-4 text-gray-400 group-hover/header:text-gray-600 transition-transform duration-200 flex-shrink-0 ${isOpen ? "rotate-180" : ""
+          }`}
+      />
+    </button>
+  );
+}
+
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function InvestmentsPage() {
@@ -99,12 +141,18 @@ export default function InvestmentsPage() {
   const [showCreateWelfiPesosFlow, setShowCreateWelfiPesosFlow] = useState(false);
   const [currency, setCurrency] = useState<"ARS" | "USD">("ARS");
 
+  // ── Collapsed sections state  — packs default collapsed, rest open ──
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ packs: true });
+  const toggle = (key: string) =>
+    setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
+
   // ── Data state ──
   const [customs, setCustoms] = useState<TracingObjective[]>([]);
   const [recommended, setRecommended] = useState<TracingObjective[]>([]);
   const [panel, setPanel] = useState<PanelData | null>(null);
   const [welfiPesosFunds, setWelfiPesosFunds] = useState<WelfiFundObjective[]>([]);
   const [welfiDolaresFunds, setWelfiDolaresFunds] = useState<WelfiFundObjective[]>([]);
+  const [packs, setPacks] = useState<PortfolioPack[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -120,17 +168,19 @@ export default function InvestmentsPage() {
     else setLoading(true);
     setError(null);
     try {
-      const [objData, panelData, pesos, dollars] = await Promise.all([
+      const [objData, panelData, pesos, dollars, packsData] = await Promise.all([
         fetchObjectivesReal(),
         fetchPanel(),
         fetchWelfiPesos(),
         fetchWelfiDollars(),
+        fetchInvestedPacks(),
       ]);
       setCustoms(objData?.customs ?? []);
       setRecommended(objData?.recommended ?? []);
       setPanel(panelData);
       setWelfiPesosFunds(pesos);
       setWelfiDolaresFunds(dollars);
+      setPacks(packsData);
     } catch (err) {
       console.error("[InvestmentsPage] Load error:", err);
       setError("No pudimos cargar tus inversiones. Intentá de nuevo.");
@@ -157,6 +207,18 @@ export default function InvestmentsPage() {
     ...TYPE_ORDER.filter((t) => groupedByType[t]),
     ...Object.keys(groupedByType).filter((t) => !TYPE_ORDER.includes(t)),
   ];
+
+  // ── Total value helpers ──
+  const welfiPesosTotal = welfiPesosFunds.reduce((s, f) => s + (f.current_position_value_pesos ?? 0), 0);
+  const welfiDolaresTotal = welfiDolaresFunds.reduce((s, f) => s + (f.current_position_value ?? 0), 0);
+  const packsTotal = packs.reduce((s, p) => s + (p.current_position_value_pesos ?? p.value), 0);
+
+  function objectivesTotal(objectives: TracingObjective[]): number {
+    return objectives.reduce(
+      (s, o) => s + (currency === "USD" ? o.current_position_value : o.current_position_value_pesos),
+      0
+    );
+  }
 
   // ── Welfi Fund card renderer (fixed currency per fund type) ──
   const renderWelfiFundCard = (fund: WelfiFundObjective, isARS: boolean) => {
@@ -214,6 +276,55 @@ export default function InvestmentsPage() {
         <div className="border-t border-gray-50 px-5 py-3 bg-gray-50/30">
           <button
             onClick={(e) => { e.stopPropagation(); setShowCreateWelfiPesosFlow(true); }}
+            className="w-full flex items-center justify-center gap-1.5 py-2 bg-[#3246ff] text-white rounded-lg hover:bg-[#2635c2] transition-colors font-semibold text-xs"
+          >
+            <Plus className="size-3.5" /> Sumar
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // ── Pack card renderer ──
+  const renderPackCard = (pack: PortfolioPack) => {
+    const perfRaw = currency === "USD" ? (pack.performance ?? 0) : (pack.performance_pesos ?? 0);
+    const perfPct = perfRaw * 100;
+    const isPositive = perfPct >= 0;
+    const perfDisplay = `${isPositive ? "+" : ""}${perfPct.toFixed(2)}%`;
+    const displayValue = currency === "USD" && panel?.dollar_value
+      ? `U$S ${formatUSD((pack.current_position_value_pesos ?? pack.value) / panel.dollar_value)}`
+      : `$ ${formatARS(pack.current_position_value_pesos ?? pack.value)}`;
+
+    return (
+      <div
+        key={pack.objective_id}
+        onClick={() => pack.objective_id && router.push(`/investments/${pack.objective_id}`)}
+        className="bg-white rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden"
+      >
+        <div className="p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center flex-shrink-0 border border-purple-100">
+              <span className="text-lg">📦</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-bold text-gray-900 truncate leading-tight">{pack.name}</h3>
+              <span className="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-md mt-0.5 bg-purple-50 text-purple-600">
+                Pack · {pack.order_items?.length ?? 0} activos
+              </span>
+            </div>
+            <ChevronRight className="size-4 text-gray-300 group-hover:text-gray-500 transition-colors flex-shrink-0" />
+          </div>
+          <div className="flex items-end justify-between">
+            <p className="text-xl font-black text-gray-900 tabular-nums leading-none">{displayValue}</p>
+            <span className={`text-xs font-bold px-2 py-1 rounded-lg ${isPositive ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"}`}>
+              {isPositive ? <TrendingUp className="size-3 inline mr-0.5 -mt-0.5" /> : <TrendingDown className="size-3 inline mr-0.5 -mt-0.5" />}
+              {perfDisplay}
+            </span>
+          </div>
+        </div>
+        <div className="border-t border-gray-50 px-5 py-3 bg-gray-50/30">
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowProductSelector(true); }}
             className="w-full flex items-center justify-center gap-1.5 py-2 bg-[#3246ff] text-white rounded-lg hover:bg-[#2635c2] transition-colors font-semibold text-xs"
           >
             <Plus className="size-3.5" /> Sumar
@@ -344,68 +455,103 @@ export default function InvestmentsPage() {
         </div>
       )}
 
-      {/* Content */}
+      {/* ── Content ── */}
       {!loading && !error && (
         <>
-          {/* Welfi Pesos — individual funds from Products API, always ARS */}
+          {/* ── Welfi Pesos ── */}
           {welfiPesosFunds.length > 0 && (
             <section>
-              <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-0.5 h-5 bg-[#3246ff] rounded-full" />
-                <h3 className="text-sm font-bold text-gray-800">Welfi Pesos</h3>
-                <span className="text-[11px] text-gray-400 font-medium bg-gray-100 px-1.5 py-0.5 rounded-md">
-                  {welfiPesosFunds.length}
-                </span>
-                <div className="flex-1 h-px bg-gray-100" />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                {welfiPesosFunds.map((f) => renderWelfiFundCard(f, true))}
-              </div>
+              <SectionHeader
+                accentBg="bg-[#3246ff]"
+                label="Welfi Pesos"
+                count={welfiPesosFunds.length}
+                totalDisplay={`$ ${formatARS(welfiPesosTotal)}`}
+                isOpen={!collapsed["welfiPesos"]}
+                onToggle={() => toggle("welfiPesos")}
+              />
+              {!collapsed["welfiPesos"] && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                  {welfiPesosFunds.map((f) => renderWelfiFundCard(f, true))}
+                </div>
+              )}
             </section>
           )}
 
-          {/* Welfi Dólares — individual funds from Products API, always USD */}
+          {/* ── Welfi Dólares ── */}
           {welfiDolaresFunds.length > 0 && (
             <section>
-              <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-0.5 h-5 bg-emerald-500 rounded-full" />
-                <h3 className="text-sm font-bold text-gray-800">Welfi Dólares</h3>
-                <span className="text-[11px] text-gray-400 font-medium bg-gray-100 px-1.5 py-0.5 rounded-md">
-                  {welfiDolaresFunds.length}
-                </span>
-                <div className="flex-1 h-px bg-gray-100" />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                {welfiDolaresFunds.map((f) => renderWelfiFundCard(f, false))}
-              </div>
+              <SectionHeader
+                accentBg="bg-emerald-500"
+                label="Welfi Dólares"
+                count={welfiDolaresFunds.length}
+                totalDisplay={`U$S ${formatUSD(welfiDolaresTotal)}`}
+                isOpen={!collapsed["welfiDolares"]}
+                onToggle={() => toggle("welfiDolares")}
+              />
+              {!collapsed["welfiDolares"] && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                  {welfiDolaresFunds.map((f) => renderWelfiFundCard(f, false))}
+                </div>
+              )}
             </section>
           )}
 
-          {/* All objectives grouped by type */}
+          {/* ── Objectives grouped by type ── */}
           {sortedTypes.map((type) => {
             const config = TYPE_CONFIG[type] ?? { label: type, accentBg: "bg-gray-400" };
             const objectives = groupedByType[type];
             if (!objectives?.length) return null;
 
+            const sectionKey = `obj_${type}`;
+            const totalVal = objectivesTotal(objectives);
+            const totalStr = currency === "USD"
+              ? `U$S ${formatUSD(totalVal)}`
+              : `$ ${formatARS(totalVal)}`;
+
             return (
               <section key={type}>
-                <div className="flex items-center gap-2.5 mb-3">
-                  <div className={`w-0.5 h-5 ${config.accentBg} rounded-full`} />
-                  <h3 className="text-sm font-bold text-gray-800">{config.label}</h3>
-                  <span className="text-[11px] text-gray-400 font-medium bg-gray-100 px-1.5 py-0.5 rounded-md">
-                    {objectives.length}
-                  </span>
-                  <div className="flex-1 h-px bg-gray-100" />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                  {objectives.map(renderObjectiveCard)}
-                </div>
+                <SectionHeader
+                  accentBg={config.accentBg}
+                  label={config.label}
+                  count={objectives.length}
+                  totalDisplay={totalStr}
+                  isOpen={!collapsed[sectionKey]}
+                  onToggle={() => toggle(sectionKey)}
+                />
+                {!collapsed[sectionKey] && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                    {objectives.map(renderObjectiveCard)}
+                  </div>
+                )}
               </section>
             );
           })}
 
+          {/* ── Packs Temáticos (at the end, default collapsed) ── */}
+          {packs.length > 0 && (
+            <section>
+              <SectionHeader
+                accentBg="bg-[#9b59b6]"
+                label="Packs temáticos"
+                count={packs.length}
+                totalDisplay={
+                  currency === "USD" && panel?.dollar_value
+                    ? `U$S ${formatUSD(packsTotal / panel.dollar_value)}`
+                    : `$ ${formatARS(packsTotal)}`
+                }
+                isOpen={!collapsed["packs"]}
+                onToggle={() => toggle("packs")}
+              />
+              {!collapsed["packs"] && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                  {packs.map(renderPackCard)}
+                </div>
+              )}
+            </section>
+          )}
+
           {/* Empty state */}
-          {allObjectives.length === 0 && welfiPesosFunds.length === 0 && welfiDolaresFunds.length === 0 && (
+          {allObjectives.length === 0 && welfiPesosFunds.length === 0 && welfiDolaresFunds.length === 0 && packs.length === 0 && (
             <div className="text-center py-20">
               <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl">🏦</span>
